@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Projet, Etudiant, Enseignant, Stage
+from .models import Projet, Etudiant, Enseignant, Stage, Evaluation
 
 
 @admin.register(Enseignant)
@@ -30,3 +30,11 @@ class StageAdmin(admin.ModelAdmin):
     list_filter = ('type_stage', 'statut', 'annee_universitaire', 'ville')
     search_fields = ('titre', 'description', 'entreprise', 'technologies')
     readonly_fields = ('date_creation',)
+
+
+@admin.register(Evaluation)
+class EvaluationAdmin(admin.ModelAdmin):
+    list_display = ('__str__', 'enseignant', 'note_moyenne', 'date_evaluation')
+    list_filter = ('enseignant', 'date_evaluation')
+    search_fields = ('commentaire', 'projet__titre', 'stage__titre')
+    readonly_fields = ('date_evaluation', 'date_modification')

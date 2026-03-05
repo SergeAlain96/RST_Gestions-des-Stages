@@ -13,6 +13,10 @@ import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 import DashboardPage from './pages/DashboardPage'
 import SubmitProjetPage from './pages/SubmitProjetPage'
+import SubmitStagePage from './pages/SubmitStagePage'
+import DashboardEnseignantPage from './pages/DashboardEnseignantPage'
+import EvaluationFormPage from './pages/EvaluationFormPage'
+import EvaluationsListPage from './pages/EvaluationsListPage'
 
 function App() {
   return (
@@ -42,6 +46,27 @@ function App() {
                   <Route path="/submit/projet" element={
                     <ProtectedRoute requiredRole="etudiant">
                       <SubmitProjetPage />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/submit/stage" element={
+                    <ProtectedRoute requiredRole="etudiant">
+                      <SubmitStagePage />
+                    </ProtectedRoute>
+                  } />
+                  {/* Espace enseignant */}
+                  <Route path="/enseignant" element={
+                    <ProtectedRoute requiredRole="enseignant">
+                      <DashboardEnseignantPage />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/enseignant/evaluer" element={
+                    <ProtectedRoute requiredRole="enseignant">
+                      <EvaluationFormPage />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/enseignant/evaluations" element={
+                    <ProtectedRoute requiredRole="enseignant">
+                      <EvaluationsListPage />
                     </ProtectedRoute>
                   } />
                 </Routes>

@@ -69,6 +69,12 @@ export default function DashboardPage() {
               >
                 + Nouveau projet
               </Link>
+              <Link
+                to="/submit/stage"
+                className="px-5 py-2.5 bg-white/20 text-white font-semibold rounded-lg hover:bg-white/30 transition text-sm border border-white/30"
+              >
+                + Nouveau stage
+              </Link>
               <button
                 onClick={logout}
                 className="px-5 py-2.5 border border-white/30 text-white font-medium rounded-lg hover:bg-white/10 transition text-sm"
@@ -141,6 +147,9 @@ export default function DashboardPage() {
         <section>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-bold text-gray-900">Mes Stages</h2>
+            <Link to="/submit/stage" className="text-emerald-600 hover:text-emerald-800 text-sm font-medium">
+              + Soumettre un stage
+            </Link>
           </div>
 
           {data?.stages && data.stages.length > 0 ? (
@@ -178,7 +187,10 @@ export default function DashboardPage() {
               <svg className="w-12 h-12 text-gray-300 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5" />
               </svg>
-              <p className="text-gray-500">Aucun stage enregistré pour le moment.</p>
+              <p className="text-gray-500 mb-3">Aucun stage enregistré pour le moment.</p>
+              <Link to="/submit/stage" className="text-emerald-600 hover:underline font-medium text-sm">
+                Soumettre votre premier stage →
+              </Link>
             </div>
           )}
         </section>

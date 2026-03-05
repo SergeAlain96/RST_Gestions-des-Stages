@@ -37,3 +37,21 @@ class IsOwnerEtudiant(BasePermission):
         if hasattr(obj, 'etudiant'):
             return obj.etudiant == etudiant
         return False
+
+
+class IsTuteurOfProjet(BasePermission):
+    """Vérifie que l'enseignant est le tuteur du projet."""
+
+    def has_object_permission(self, request, view, obj):
+        if not hasattr(request.user, 'enseignant_profile'):
+            return False
+        return obj.tuteur == request.user.enseignant_profile
+
+
+class IsTuteurOfStage(BasePermission):
+    """Vérifie que l'enseignant est le tuteur académique du stage."""
+
+    def has_object_permission(self, request, view, obj):
+        if not hasattr(request.user, 'enseignant_profile'):
+            return False
+        return obj.tuteur_academique == request.user.enseignant_profile

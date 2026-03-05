@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function Header() {
-  const { user, isAuthenticated, isEtudiant, logout } = useAuth();
+  const { user, isAuthenticated, isEtudiant, isEnseignant, logout } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -80,6 +80,19 @@ export default function Header() {
                         <Link to="/submit/projet" onClick={() => setMenuOpen(false)} className="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50">
                           <span>📝</span> Déposer un projet
                         </Link>
+                        <Link to="/submit/stage" onClick={() => setMenuOpen(false)} className="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50">
+                          <span>🏢</span> Déposer un stage
+                        </Link>
+                      </>
+                    )}
+                    {isEnseignant && (
+                      <>
+                        <Link to="/enseignant" onClick={() => setMenuOpen(false)} className="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50">
+                          <span>📊</span> Mon Dashboard
+                        </Link>
+                        <Link to="/enseignant/evaluations" onClick={() => setMenuOpen(false)} className="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50">
+                          <span>📝</span> Mes évaluations
+                        </Link>
                       </>
                     )}
                     <div className="border-t border-gray-100">
@@ -134,6 +147,13 @@ export default function Header() {
                   <>
                     <Link to="/dashboard" onClick={() => setMobileOpen(false)} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-lg">📊 Mon Dashboard</Link>
                     <Link to="/submit/projet" onClick={() => setMobileOpen(false)} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-lg">📝 Déposer un projet</Link>
+                    <Link to="/submit/stage" onClick={() => setMobileOpen(false)} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-lg">🏢 Déposer un stage</Link>
+                  </>
+                )}
+                {isEnseignant && (
+                  <>
+                    <Link to="/enseignant" onClick={() => setMobileOpen(false)} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-lg">📊 Mon Dashboard</Link>
+                    <Link to="/enseignant/evaluations" onClick={() => setMobileOpen(false)} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-lg">📝 Mes évaluations</Link>
                   </>
                 )}
                 <button onClick={() => { setMobileOpen(false); logout(); }} className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg">

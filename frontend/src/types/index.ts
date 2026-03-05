@@ -61,16 +61,22 @@ export interface LoginCredentials {
 }
 
 export interface RegisterData {
+  role: 'etudiant' | 'enseignant';
   username: string;
   email: string;
   password: string;
   password2: string;
   first_name: string;
   last_name: string;
-  matricule: string;
-  filiere: string;
-  niveau: string;
-  promotion: number;
+  // Étudiant
+  matricule?: string;
+  filiere?: string;
+  niveau?: string;
+  promotion?: number;
+  // Enseignant
+  departement?: string;
+  specialite?: string;
+  telephone?: string;
 }
 
 export interface DashboardData {
@@ -83,6 +89,52 @@ export interface DashboardData {
     total_stages: number;
     stages_en_cours: number;
     stages_termines: number;
+  };
+  projets: Projet[];
+  stages: Stage[];
+}
+
+// ── Évaluations ─────────────────────────────────────────
+
+export interface Evaluation {
+  id: number;
+  projet: number | null;
+  stage: number | null;
+  enseignant: number;
+  enseignant_nom: string;
+  note_rapport: number | null;
+  note_soutenance: number | null;
+  note_technique: number | null;
+  note_comportement: number | null;
+  note_moyenne: number | null;
+  commentaire: string;
+  date_evaluation: string;
+  date_modification: string;
+}
+
+export interface EvaluationFormData {
+  projet?: number | null;
+  stage?: number | null;
+  note_rapport: number | null;
+  note_soutenance: number | null;
+  note_technique: number | null;
+  note_comportement: number | null;
+  commentaire: string;
+}
+
+export interface EnseignantDashboardData {
+  enseignant: Enseignant;
+  stats: {
+    total_projets: number;
+    projets_en_attente: number;
+    projets_en_cours: number;
+    projets_termines: number;
+    projets_valides: number;
+    projets_refuses: number;
+    total_stages: number;
+    stages_en_cours: number;
+    stages_termines: number;
+    total_evaluations: number;
   };
   projets: Projet[];
   stages: Stage[];

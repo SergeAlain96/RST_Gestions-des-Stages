@@ -165,3 +165,81 @@ class Stage(models.Model):
     @property
     def technologies_list(self):
         return [tech.strip() for tech in self.technologies.split(',') if tech.strip()]
+
+
+class Evaluation(models.Model):
+    """Modèle représentant une évaluation / notation par un enseignant."""
+
+    # Lien vers le projet OU le stage évalué (un seul rempli)
+    projet = models.ForeignKey(
+        Projet,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='evaluations'
+    )
+    stage = models.ForeignKey(
+        Stage,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='evaluations'
+    )
+    enseignant = models.ForeignKey(
+        Enseignant,
+        on_delete=models.CASCADE,
+        related_name='evaluations'
+    )
+
+    # Grille de notation (/20 chacune)
+    note_rapport = models.DecimalField(
+        max_digits=4, decimal_places=2, null=True, blank=True,
+        help_text="Note du rapport écrit (/20)"
+    )
+    note_soutenance = models.DecimalField(
+        max_digits=4, decimal_places=2, null=True, blank=True,
+        help_text="Note de la soutenance (/20)"
+    )
+    note_technique = models.DecimalField(
+        max_digits=4, decimal_places=2, null=True, blank=True,
+        help_text="Note technique (/20)"
+    )
+    note_comportement = models.DecimalField(
+        max_digits=4, decimal_places=2, null=True, blank=True,
+        help_text="Note de comportement / assiduité (/20)"
+    )
+
+    commentaire = models.TextField(blank=True, help_text="Commentaire général de l'évaluateur")
+    date_evaluation = models.DateTimeField(auto_now_add=True)
+    date_modification = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Évaluation'
+        verbose_name_plural = 'Évaluations'
+        ordering = ['-date_evaluation']
+        # Un enseignant ne peut évaluer un projet/stage qu'une seule fois
+        constraints = [
+            models.UniqueConstraint(
+                fields=['projet', 'enseignant'],
+                condition=models.Q(projet__isnull=False),
+                name='unique_evaluation_projet_enseignant'
+            ),
+            models.UniqueConstraint(
+                fields=['stage', 'enseignant'],
+                condition=models.Q(stage__isnull=False),
+                name='unique_evaluation_stage_enseignant'
+            ),
+        ]
+
+    def __str__(self):
+        cible = self.projet or self.stage
+        return f"Évaluation de {cible} par {self.enseignant}"
+
+    @property
+    def note_moyenne(self):
+        """Calcule la moyenne des notes renseignées."""
+        notes = [n for n in [self.note_rapport, self.note_soutenance,
+                             self.note_technique, self.note_comportement] if n is not None]
+        if not notes:
+            return None
+        return round(sum(notes) / len(notes), 2)

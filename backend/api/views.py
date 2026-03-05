@@ -5,7 +5,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework_simplejwt.tokens import RefreshToken
 from django_filters.rest_framework import DjangoFilterBackend
-from .models import Projet, Etudiant, Enseignant, Stage
+from .models import Projet, Etudiant, Enseignant, Stage, Evaluation
 from .serializers import (
     ProjetListSerializer,
     ProjetDetailSerializer,
@@ -17,9 +17,13 @@ from .serializers import (
     UserProfileSerializer,
     ProjetSubmitSerializer,
     StageSubmitSerializer,
+    EvaluationSerializer,
+    EvaluationCreateSerializer,
+    ProjetValidationSerializer,
+    StageValidationSerializer,
 )
 from .filters import ProjetFilter, StageFilter
-from .permissions import IsEtudiant, IsOwnerEtudiant
+from .permissions import IsEtudiant, IsOwnerEtudiant, IsEnseignant, IsTuteurOfProjet, IsTuteurOfStage
 
 
 # ── Auth Views ───────────────────────────────────────────
@@ -131,6 +135,181 @@ def submit_stage(request):
         StageDetailSerializer(stage).data,
         status=status.HTTP_201_CREATED
     )
+
+
+# ── Dashboard Enseignant ─────────────────────────────────
+
+@api_view(['GET'])
+@perm_classes([IsAuthenticated, IsEnseignant])
+def dashboard_enseignant(request):
+    """Retourne les statistiques et données du dashboard enseignant."""
+    enseignant = request.user.enseignant_profile
+
+    projets = Projet.objects.filter(tuteur=enseignant).select_related('tuteur__user').prefetch_related('etudiants__user')
+    stages = Stage.objects.filter(tuteur_academique=enseignant).select_related('etudiant__user', 'tuteur_academique__user')
+    evaluations = Evaluation.objects.filter(enseignant=enseignant).select_related('projet', 'stage')
+
+    return Response({
+        'enseignant': EnseignantSerializer(enseignant).data,
+        'stats': {
+            'total_projets': projets.count(),
+            'projets_en_attente': projets.filter(statut='EN_ATTENTE').count(),
+            'projets_en_cours': projets.filter(statut='EN_COURS').count(),
+            'projets_termines': projets.filter(statut='TERMINE').count(),
+            'projets_valides': projets.filter(statut='VALIDE').count(),
+            'projets_refuses': projets.filter(statut='REFUSE').count(),
+            'total_stages': stages.count(),
+            'stages_en_cours': stages.filter(statut='EN_COURS').count(),
+            'stages_termines': stages.filter(statut='TERMINE').count(),
+            'total_evaluations': evaluations.count(),
+        },
+        'projets': ProjetListSerializer(projets, many=True).data,
+        'stages': StageListSerializer(stages, many=True).data,
+    })
+
+
+# ── Validation Projet/Stage (PATCH statut) ───────────────
+
+@api_view(['PATCH'])
+@perm_classes([IsAuthenticated, IsEnseignant])
+def validate_projet(request, pk):
+    """Valider/refuser un projet. Seul le tuteur ou un admin peut changer le statut."""
+    try:
+        projet = Projet.objects.get(pk=pk)
+    except Projet.DoesNotExist:
+        return Response({'detail': 'Projet non trouvé.'}, status=status.HTTP_404_NOT_FOUND)
+
+    # Vérifier que l'enseignant est le tuteur du projet
+    enseignant = request.user.enseignant_profile
+    if projet.tuteur != enseignant and not request.user.is_staff:
+        return Response(
+            {'detail': "Vous n'êtes pas le tuteur de ce projet."},
+            status=status.HTTP_403_FORBIDDEN
+        )
+
+    serializer = ProjetValidationSerializer(projet, data=request.data, partial=True)
+    serializer.is_valid(raise_exception=True)
+    serializer.save()
+    return Response(ProjetDetailSerializer(projet).data)
+
+
+@api_view(['PATCH'])
+@perm_classes([IsAuthenticated, IsEnseignant])
+def validate_stage(request, pk):
+    """Changer le statut d'un stage. Seul le tuteur académique ou un admin peut le faire."""
+    try:
+        stage = Stage.objects.get(pk=pk)
+    except Stage.DoesNotExist:
+        return Response({'detail': 'Stage non trouvé.'}, status=status.HTTP_404_NOT_FOUND)
+
+    enseignant = request.user.enseignant_profile
+    if stage.tuteur_academique != enseignant and not request.user.is_staff:
+        return Response(
+            {'detail': "Vous n'êtes pas le tuteur académique de ce stage."},
+            status=status.HTTP_403_FORBIDDEN
+        )
+
+    serializer = StageValidationSerializer(stage, data=request.data, partial=True)
+    serializer.is_valid(raise_exception=True)
+    serializer.save()
+    return Response(StageDetailSerializer(stage).data)
+
+
+# ── Assign tuteur (enseignant s'assigne à un projet/stage) ──
+
+@api_view(['POST'])
+@perm_classes([IsAuthenticated, IsEnseignant])
+def assign_tuteur_projet(request, pk):
+    """Un enseignant s'assigne comme tuteur d'un projet."""
+    try:
+        projet = Projet.objects.get(pk=pk)
+    except Projet.DoesNotExist:
+        return Response({'detail': 'Projet non trouvé.'}, status=status.HTTP_404_NOT_FOUND)
+
+    if projet.tuteur is not None:
+        return Response(
+            {'detail': f'Ce projet a déjà un tuteur : {projet.tuteur}.'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    enseignant = request.user.enseignant_profile
+    projet.tuteur = enseignant
+    projet.save()
+    return Response(ProjetDetailSerializer(projet).data)
+
+
+@api_view(['POST'])
+@perm_classes([IsAuthenticated, IsEnseignant])
+def assign_tuteur_stage(request, pk):
+    """Un enseignant s'assigne comme tuteur académique d'un stage."""
+    try:
+        stage = Stage.objects.get(pk=pk)
+    except Stage.DoesNotExist:
+        return Response({'detail': 'Stage non trouvé.'}, status=status.HTTP_404_NOT_FOUND)
+
+    if stage.tuteur_academique is not None:
+        return Response(
+            {'detail': f'Ce stage a déjà un tuteur académique : {stage.tuteur_academique}.'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    enseignant = request.user.enseignant_profile
+    stage.tuteur_academique = enseignant
+    stage.save()
+    return Response(StageDetailSerializer(stage).data)
+
+
+# ── Évaluations ──────────────────────────────────────────
+
+@api_view(['GET', 'POST'])
+@perm_classes([IsAuthenticated, IsEnseignant])
+def evaluation_list_create(request):
+    """
+    GET  → Liste des évaluations de l'enseignant connecté.
+    POST → Créer une nouvelle évaluation.
+    """
+    enseignant = request.user.enseignant_profile
+
+    if request.method == 'GET':
+        evaluations = Evaluation.objects.filter(enseignant=enseignant).select_related(
+            'projet', 'stage', 'enseignant__user'
+        )
+        return Response(EvaluationSerializer(evaluations, many=True).data)
+
+    # POST
+    serializer = EvaluationCreateSerializer(data=request.data, context={'request': request})
+    serializer.is_valid(raise_exception=True)
+    evaluation = serializer.save()
+    return Response(EvaluationSerializer(evaluation).data, status=status.HTTP_201_CREATED)
+
+
+@api_view(['GET', 'PUT', 'DELETE'])
+@perm_classes([IsAuthenticated, IsEnseignant])
+def evaluation_detail(request, pk):
+    """
+    GET    → Détail d'une évaluation.
+    PUT    → Modifier une évaluation existante.
+    DELETE → Supprimer une évaluation.
+    """
+    enseignant = request.user.enseignant_profile
+
+    try:
+        evaluation = Evaluation.objects.get(pk=pk, enseignant=enseignant)
+    except Evaluation.DoesNotExist:
+        return Response({'detail': 'Évaluation non trouvée.'}, status=status.HTTP_404_NOT_FOUND)
+
+    if request.method == 'GET':
+        return Response(EvaluationSerializer(evaluation).data)
+
+    if request.method == 'PUT':
+        serializer = EvaluationCreateSerializer(evaluation, data=request.data, context={'request': request})
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(EvaluationSerializer(evaluation).data)
+
+    # DELETE
+    evaluation.delete()
+    return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class ProjetViewSet(viewsets.ReadOnlyModelViewSet):

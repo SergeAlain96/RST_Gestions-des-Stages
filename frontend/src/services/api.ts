@@ -2,6 +2,7 @@ import axios from 'axios';
 import type {
   Projet, Stage, PaginatedResponse,
   AuthTokens, UserProfile, LoginCredentials, RegisterData, DashboardData,
+  EnseignantDashboardData, Evaluation, EvaluationFormData,
 } from '../types';
 
 const api = axios.create({
@@ -103,6 +104,72 @@ export const dashboardService = {
   getEtudiantDashboard: async (): Promise<DashboardData> => {
     const res = await api.get<DashboardData>('/dashboard/etudiant/');
     return res.data;
+  },
+
+  getEnseignantDashboard: async (): Promise<EnseignantDashboardData> => {
+    const res = await api.get<EnseignantDashboardData>('/dashboard/enseignant/');
+    return res.data;
+  },
+};
+
+// ── Enseignant Service (validation, assignation) ────────
+
+export const enseignantService = {
+  /** Valider/refuser un projet */
+  validateProjet: async (id: number, statut: string): Promise<Projet> => {
+    const res = await api.patch<Projet>(`/enseignant/projets/${id}/validate/`, { statut });
+    return res.data;
+  },
+
+  /** Changer le statut d'un stage */
+  validateStage: async (id: number, statut: string): Promise<Stage> => {
+    const res = await api.patch<Stage>(`/enseignant/stages/${id}/validate/`, { statut });
+    return res.data;
+  },
+
+  /** S'assigner comme tuteur d'un projet */
+  assignProjet: async (id: number): Promise<Projet> => {
+    const res = await api.post<Projet>(`/enseignant/projets/${id}/assign/`);
+    return res.data;
+  },
+
+  /** S'assigner comme tuteur d'un stage */
+  assignStage: async (id: number): Promise<Stage> => {
+    const res = await api.post<Stage>(`/enseignant/stages/${id}/assign/`);
+    return res.data;
+  },
+};
+
+// ── Evaluation Service ──────────────────────────────────
+
+export const evaluationService = {
+  /** Liste des évaluations de l'enseignant */
+  getAll: async (): Promise<Evaluation[]> => {
+    const res = await api.get<Evaluation[]>('/evaluations/');
+    return res.data;
+  },
+
+  /** Détail d'une évaluation */
+  getById: async (id: number): Promise<Evaluation> => {
+    const res = await api.get<Evaluation>(`/evaluations/${id}/`);
+    return res.data;
+  },
+
+  /** Créer une évaluation */
+  create: async (data: EvaluationFormData): Promise<Evaluation> => {
+    const res = await api.post<Evaluation>('/evaluations/', data);
+    return res.data;
+  },
+
+  /** Modifier une évaluation */
+  update: async (id: number, data: EvaluationFormData): Promise<Evaluation> => {
+    const res = await api.put<Evaluation>(`/evaluations/${id}/`, data);
+    return res.data;
+  },
+
+  /** Supprimer une évaluation */
+  delete: async (id: number): Promise<void> => {
+    await api.delete(`/evaluations/${id}/`);
   },
 };
 
