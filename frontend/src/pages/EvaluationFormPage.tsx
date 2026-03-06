@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { evaluationService, projetService, stageService } from '../services/api';
+import { useToast } from '../contexts/ToastContext';
 import type { EvaluationFormData } from '../types';
 
 export default function EvaluationFormPage() {
@@ -15,6 +16,7 @@ export default function EvaluationFormPage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [targetTitle, setTargetTitle] = useState('');
+  const { addToast } = useToast();
 
   const [form, setForm] = useState<EvaluationFormData>({
     projet: type === 'projet' && id ? Number(id) : null,
@@ -76,8 +78,10 @@ export default function EvaluationFormPage() {
     try {
       if (editId) {
         await evaluationService.update(Number(editId), form);
+        addToast('Évaluation modifiée avec succès !', 'success');
       } else {
         await evaluationService.create(form);
+        addToast('Évaluation enregistrée avec succès !', 'success');
       }
       setSuccess(true);
       setTimeout(() => navigate('/enseignant/evaluations'), 2000);

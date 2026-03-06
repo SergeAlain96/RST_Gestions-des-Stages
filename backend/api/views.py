@@ -175,7 +175,7 @@ def dashboard_enseignant(request):
 def validate_projet(request, pk):
     """Valider/refuser un projet. Seul le tuteur ou un admin peut changer le statut."""
     try:
-        projet = Projet.objects.get(pk=pk)
+        projet = Projet.objects.select_related('tuteur__user').prefetch_related('etudiants__user').get(pk=pk)
     except Projet.DoesNotExist:
         return Response({'detail': 'Projet non trouvé.'}, status=status.HTTP_404_NOT_FOUND)
 
@@ -198,7 +198,7 @@ def validate_projet(request, pk):
 def validate_stage(request, pk):
     """Changer le statut d'un stage. Seul le tuteur académique ou un admin peut le faire."""
     try:
-        stage = Stage.objects.get(pk=pk)
+        stage = Stage.objects.select_related('etudiant__user', 'tuteur_academique__user').get(pk=pk)
     except Stage.DoesNotExist:
         return Response({'detail': 'Stage non trouvé.'}, status=status.HTTP_404_NOT_FOUND)
 
@@ -222,7 +222,7 @@ def validate_stage(request, pk):
 def assign_tuteur_projet(request, pk):
     """Un enseignant s'assigne comme tuteur d'un projet."""
     try:
-        projet = Projet.objects.get(pk=pk)
+        projet = Projet.objects.select_related('tuteur__user').prefetch_related('etudiants__user').get(pk=pk)
     except Projet.DoesNotExist:
         return Response({'detail': 'Projet non trouvé.'}, status=status.HTTP_404_NOT_FOUND)
 
@@ -243,7 +243,7 @@ def assign_tuteur_projet(request, pk):
 def assign_tuteur_stage(request, pk):
     """Un enseignant s'assigne comme tuteur académique d'un stage."""
     try:
-        stage = Stage.objects.get(pk=pk)
+        stage = Stage.objects.select_related('etudiant__user', 'tuteur_academique__user').get(pk=pk)
     except Stage.DoesNotExist:
         return Response({'detail': 'Stage non trouvé.'}, status=status.HTTP_404_NOT_FOUND)
 
@@ -294,7 +294,9 @@ def evaluation_detail(request, pk):
     enseignant = request.user.enseignant_profile
 
     try:
-        evaluation = Evaluation.objects.get(pk=pk, enseignant=enseignant)
+        evaluation = Evaluation.objects.select_related(
+            'projet', 'stage', 'enseignant__user'
+        ).get(pk=pk, enseignant=enseignant)
     except Evaluation.DoesNotExist:
         return Response({'detail': 'Évaluation non trouvée.'}, status=status.HTTP_404_NOT_FOUND)
 

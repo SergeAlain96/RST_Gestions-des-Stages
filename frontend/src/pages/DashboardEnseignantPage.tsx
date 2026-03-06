@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../contexts/ToastContext';
 import { dashboardService, enseignantService } from '../services/api';
 import type { EnseignantDashboardData, Projet, Stage } from '../types';
 import { TYPE_PROJET_LABELS, STATUT_PROJET_LABELS, STATUT_COLORS, TYPE_STAGE_LABELS, STATUT_STAGE_LABELS } from '../types';
@@ -9,12 +10,12 @@ type Tab = 'projets' | 'stages';
 
 export default function DashboardEnseignantPage() {
   const { user, logout } = useAuth();
+  const { addToast } = useToast();
   const [data, setData] = useState<EnseignantDashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [tab, setTab] = useState<Tab>('projets');
   const [actionLoading, setActionLoading] = useState<number | null>(null);
-  const [actionMsg, setActionMsg] = useState('');
 
   const fetchData = async () => {
     try {
@@ -31,20 +32,18 @@ export default function DashboardEnseignantPage() {
 
   const handleValidation = async (type: 'projet' | 'stage', id: number, statut: string) => {
     setActionLoading(id);
-    setActionMsg('');
     try {
       if (type === 'projet') {
         await enseignantService.validateProjet(id, statut);
       } else {
         await enseignantService.validateStage(id, statut);
       }
-      setActionMsg(`Statut mis à jour avec succès.`);
+      addToast('Statut mis à jour avec succès.', 'success');
       await fetchData();
     } catch {
-      setActionMsg('Erreur lors de la mise à jour.');
+      addToast('Erreur lors de la mise à jour du statut.', 'error');
     } finally {
       setActionLoading(null);
-      setTimeout(() => setActionMsg(''), 3000);
     }
   };
 
@@ -105,13 +104,6 @@ export default function DashboardEnseignantPage() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Toast */}
-        {actionMsg && (
-          <div className={`mb-4 px-4 py-3 rounded-lg text-sm font-medium ${actionMsg.includes('Erreur') ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-green-50 text-green-700 border border-green-200'}`}>
-            {actionMsg}
-          </div>
-        )}
-
         {/* Statistiques */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
           <StatCard label="Projets tutorés" value={stats?.total_projets ?? 0} icon="📋" color="indigo" />

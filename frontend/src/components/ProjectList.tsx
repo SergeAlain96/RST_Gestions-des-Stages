@@ -3,6 +3,7 @@ import type { Projet, TypeProjet, StatutProjet } from '../types';
 import { TYPE_PROJET_LABELS, STATUT_PROJET_LABELS } from '../types';
 import { projetService } from '../services/api';
 import ProjectCard from './ProjectCard';
+import { ProjectCardSkeleton } from './Skeletons';
 
 interface ProjectListProps {
   showTitle?: boolean;
@@ -189,13 +190,12 @@ export default function ProjectList({ showTitle = true }: ProjectListProps) {
           </div>
         )}
 
-        {/* État de chargement */}
+        {/* État de chargement - Skeleton */}
         {loading && (
-          <div className="flex justify-center items-center py-20">
-            <div className="flex flex-col items-center gap-3">
-              <div className="w-10 h-10 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin" />
-              <p className="text-gray-500 text-sm">Chargement des projets...</p>
-            </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <ProjectCardSkeleton key={i} />
+            ))}
           </div>
         )}
 

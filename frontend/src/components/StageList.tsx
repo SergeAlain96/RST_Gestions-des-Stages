@@ -3,6 +3,7 @@ import type { Stage, TypeStage, StatutStage } from '../types';
 import { TYPE_STAGE_LABELS, STATUT_STAGE_LABELS } from '../types';
 import { stageService } from '../services/api';
 import StageCard from './StageCard';
+import { StageCardSkeleton } from './Skeletons';
 
 export default function StageList() {
   const [stages, setStages] = useState<Stage[]>([]);
@@ -158,13 +159,12 @@ export default function StageList() {
           </div>
         )}
 
-        {/* Chargement */}
+        {/* Chargement - Skeleton */}
         {loading && (
-          <div className="flex justify-center items-center py-20">
-            <div className="flex flex-col items-center gap-3">
-              <div className="w-10 h-10 border-4 border-emerald-200 border-t-emerald-600 rounded-full animate-spin" />
-              <p className="text-gray-500 text-sm">Chargement des stages...</p>
-            </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <StageCardSkeleton key={i} />
+            ))}
           </div>
         )}
 

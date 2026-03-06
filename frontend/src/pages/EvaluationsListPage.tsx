@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { evaluationService, projetService, stageService } from '../services/api';
+import { useToast } from '../contexts/ToastContext';
 import type { Evaluation } from '../types';
 
 export default function EvaluationsListPage() {
@@ -9,6 +10,7 @@ export default function EvaluationsListPage() {
   const [error, setError] = useState('');
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [titles, setTitles] = useState<Record<string, string>>({});
+  const { addToast } = useToast();
 
   const fetchEvaluations = async () => {
     try {
@@ -52,8 +54,9 @@ export default function EvaluationsListPage() {
       await evaluationService.delete(id);
       setEvaluations((prev) => prev.filter((e) => e.id !== id));
       setDeleteId(null);
+      addToast('Évaluation supprimée avec succès.', 'success');
     } catch {
-      setError('Erreur lors de la suppression.');
+      addToast('Erreur lors de la suppression.', 'error');
     }
   };
 

@@ -22,7 +22,7 @@ export default function ProjectCard({ projet }: ProjectCardProps) {
           <img
             src={projet.image}
             alt={projet.titre}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            className={`w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 ${projet.statut === 'ARCHIVE' ? 'grayscale opacity-70' : ''}`}
           />
         ) : (
           <div className="text-center">
@@ -38,6 +38,17 @@ export default function ProjectCard({ projet }: ProjectCardProps) {
         <span className={`absolute top-3 right-3 px-2.5 py-1 rounded-full text-xs font-semibold ${STATUT_COLORS[projet.statut] ?? 'bg-gray-100 text-gray-800'}`}>
           {STATUT_PROJET_LABELS[projet.statut] ?? projet.statut}
         </span>
+        {/* Overlay archivé */}
+        {projet.statut === 'ARCHIVE' && (
+          <div className="absolute inset-0 bg-gray-900/40 flex items-center justify-center">
+            <span className="bg-gray-800/80 text-white text-sm font-bold px-4 py-2 rounded-lg backdrop-blur-sm flex items-center gap-2">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+              </svg>
+              Archivé
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Contenu */}

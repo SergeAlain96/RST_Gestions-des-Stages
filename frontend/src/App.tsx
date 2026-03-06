@@ -1,5 +1,6 @@
 import { Routes, Route } from 'react-router-dom'
 import { AuthProvider } from './contexts/AuthContext'
+import { ToastProvider } from './contexts/ToastContext'
 import ErrorBoundary from './components/ErrorBoundary'
 import Header from './components/Header'
 import Footer from './components/Footer'
@@ -21,8 +22,9 @@ import EvaluationsListPage from './pages/EvaluationsListPage'
 function App() {
   return (
     <AuthProvider>
-      <ErrorBoundary>
-        <Routes>
+      <ToastProvider>
+        <ErrorBoundary>
+          <Routes>
           {/* Pages auth (sans Header/Footer) */}
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
@@ -76,6 +78,7 @@ function App() {
           } />
         </Routes>
       </ErrorBoundary>
+    </ToastProvider>
     </AuthProvider>
   )
 }
