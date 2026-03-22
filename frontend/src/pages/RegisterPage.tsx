@@ -48,6 +48,8 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
 
   const isEtudiant = form.role === 'etudiant';
+  const isEnseignant = form.role === 'enseignant';
+  const isEntreprise = form.role === 'entreprise';
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -62,7 +64,7 @@ export default function RegisterPage() {
     setLoading(true);
     try {
       await register(form);
-      navigate(isEtudiant ? '/dashboard' : '/enseignant');
+      navigate(isEtudiant ? '/dashboard' : isEnseignant ? '/enseignant' : '/entreprise');
     } catch (err: any) {
       if (err.response?.data) {
         const data = err.response.data;
@@ -124,7 +126,7 @@ export default function RegisterPage() {
             {/* ─── Choix du rôle ─── */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Je suis :</label>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-3 gap-3">
                 <button
                   type="button"
                   onClick={() => setForm((prev) => ({ ...prev, role: 'etudiant' }))}
@@ -144,17 +146,32 @@ export default function RegisterPage() {
                   type="button"
                   onClick={() => setForm((prev) => ({ ...prev, role: 'enseignant' }))}
                   className={`flex items-center gap-3 p-4 rounded-xl border-2 transition-all ${
-                    !isEtudiant
+                    isEnseignant
                       ? 'border-purple-500 bg-purple-50 shadow-md'
                       : 'border-gray-200 hover:border-gray-300 bg-white'
                   }`}
                 >
                   <span className="text-2xl">👨‍🏫</span>
                   <div className="text-left">
-                    <p className={`font-semibold text-sm ${!isEtudiant ? 'text-purple-700' : 'text-gray-700'}`}>Enseignant</p>
+                    <p className={`font-semibold text-sm ${isEnseignant ? 'text-purple-700' : 'text-gray-700'}`}>Enseignant</p>
                     <p className="text-xs text-gray-500">Encadrer & évaluer</p>
                   </div>
                 </button>
+                  <button
+                    type="button"
+                    onClick={() => setForm((prev) => ({ ...prev, role: 'entreprise' }))}
+                    className={`flex items-center gap-3 p-4 rounded-xl border-2 transition-all ${
+                      isEntreprise
+                        ? 'border-green-600 bg-green-50 shadow-md'
+                        : 'border-gray-200 hover:border-gray-300 bg-white'
+                    }`}
+                  >
+                    <span className="text-2xl">🏢</span>
+                    <div className="text-left">
+                      <p className={`font-semibold text-sm ${isEntreprise ? 'text-green-700' : 'text-gray-700'}`}>Entreprise</p>
+                      <p className="text-xs text-gray-500">Publier des offres</p>
+                    </div>
+                  </button>
               </div>
               {errors.role && <p className="text-red-500 text-xs mt-1">{errors.role}</p>}
             </div>
@@ -182,7 +199,17 @@ export default function RegisterPage() {
 
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-              <input id="email" name="email" type="email" required value={form.email} onChange={handleChange} className={inputClass('email')} placeholder={isEtudiant ? 'abdoulaye@univ-ouaga.bf' : 'prof.diallo@univ-ouaga.bf'} />
+              <input
+                id="email" name="email" type="email" required
+                value={form.email} onChange={handleChange}
+                className={inputClass('email')}
+                placeholder={isEtudiant ? 'prenom.nom@esi.unb.bf' : 'prof.nom@esi.unb.bf'}
+              />
+              {isEtudiant && !errors.email && (
+                <p className="text-xs text-blue-600 mt-1 flex items-center gap-1">
+                  <span>ℹ️</span> Utilisez votre email institutionnel <strong>@esi.unb.bf</strong>
+                </p>
+              )}
               {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
             </div>
 
@@ -247,7 +274,7 @@ export default function RegisterPage() {
             )}
 
             {/* ─── Champs conditionnels : Enseignant ─── */}
-            {!isEtudiant && (
+            {isEnseignant && (
               <>
                 <div className="pt-2 border-t border-gray-100">
                   <p className="text-xs font-semibold text-purple-600 uppercase tracking-wider mb-3">👨‍🏫 Informations professionnelles</p>
@@ -274,6 +301,70 @@ export default function RegisterPage() {
                   <label htmlFor="telephone" className="block text-sm font-medium text-gray-700 mb-1">Téléphone</label>
                   <input id="telephone" name="telephone" type="tel" value={form.telephone} onChange={handleChange} className={inputClass('telephone')} placeholder="+226 70 00 00 00" />
                   {errors.telephone && <p className="text-red-500 text-xs mt-1">{errors.telephone}</p>}
+
+                            {/* ─── Champs conditionnels : Entreprise ─── */}
+                            {isEntreprise && (
+                              <>
+                                <div className="pt-2 border-t border-gray-100">
+                                  <p className="text-xs font-semibold text-green-700 uppercase tracking-wider mb-3">🏢 Informations de l'entreprise</p>
+                                </div>
+
+                                <div>
+                                  <label htmlFor="nom_entreprise" className="block text-sm font-medium text-gray-700 mb-1">
+                                    Nom de l'entreprise <span className="text-red-500">*</span>
+                                  </label>
+                                  <input
+                                    id="nom_entreprise" name="nom_entreprise" required={isEntreprise}
+                                    value={form.nom_entreprise ?? ''} onChange={handleChange}
+                                    className={inputClass('nom_entreprise')} placeholder="ONATEL, SOFIB, BRAKINA..." />
+                                  {errors.nom_entreprise && <p className="text-red-500 text-xs mt-1">{errors.nom_entreprise}</p>}
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-3">
+                                  <div>
+                                    <label htmlFor="secteur" className="block text-sm font-medium text-gray-700 mb-1">
+                                      Secteur d'activité <span className="text-red-500">*</span>
+                                    </label>
+                                    <input
+                                      id="secteur" name="secteur" required={isEntreprise}
+                                      value={form.secteur ?? ''} onChange={handleChange}
+                                      className={inputClass('secteur')} placeholder="Télécommunications, IT..." />
+                                    {errors.secteur && <p className="text-red-500 text-xs mt-1">{errors.secteur}</p>}
+                                  </div>
+                                  <div>
+                                    <label htmlFor="ville" className="block text-sm font-medium text-gray-700 mb-1">Ville</label>
+                                    <input
+                                      id="ville" name="ville"
+                                      value={form.ville ?? ''} onChange={handleChange}
+                                      className={inputClass('ville')} placeholder="Bobo-Dioulasso, Ouagadougou..." />
+                                    {errors.ville && <p className="text-red-500 text-xs mt-1">{errors.ville}</p>}
+                                  </div>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-3">
+                                  <div>
+                                    <label htmlFor="tel_entreprise" className="block text-sm font-medium text-gray-700 mb-1">Téléphone</label>
+                                    <input
+                                      id="tel_entreprise" name="tel_entreprise" type="tel"
+                                      value={form.tel_entreprise ?? ''} onChange={handleChange}
+                                      className={inputClass('tel_entreprise')} placeholder="+226 20 00 00 00" />
+                                    {errors.tel_entreprise && <p className="text-red-500 text-xs mt-1">{errors.tel_entreprise}</p>}
+                                  </div>
+                                  <div>
+                                    <label htmlFor="site_web" className="block text-sm font-medium text-gray-700 mb-1">Site web</label>
+                                    <input
+                                      id="site_web" name="site_web" type="url"
+                                      value={form.site_web ?? ''} onChange={handleChange}
+                                      className={inputClass('site_web')} placeholder="https://..." />
+                                    {errors.site_web && <p className="text-red-500 text-xs mt-1">{errors.site_web}</p>}
+                                  </div>
+                                </div>
+
+                                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-xs text-yellow-800">
+                                  ⚠️ Votre compte entreprise sera examiné et validé par un administrateur avant d'être activé.
+                                </div>
+                              </>
+                            )}
                 </div>
               </>
             )}
@@ -284,7 +375,9 @@ export default function RegisterPage() {
               className={`w-full py-3 text-white font-semibold rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-md ${
                 isEtudiant
                   ? 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700'
-                  : 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700'
+                  : isEnseignant
+                  ? 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700'
+                  : 'bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800'
               }`}
             >
               {loading ? (
@@ -296,7 +389,7 @@ export default function RegisterPage() {
                   Inscription...
                 </span>
               ) : (
-                `Créer mon compte ${isEtudiant ? 'étudiant' : 'enseignant'}`
+                `Créer mon compte ${isEtudiant ? 'étudiant' : isEnseignant ? 'enseignant' : 'entreprise'}`
               )}
             </button>
           </form>

@@ -1,15 +1,26 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
-from .models import Projet, Etudiant, Enseignant, Stage, Evaluation
+from .models import (
+    Projet, Etudiant, Enseignant, Stage, Evaluation, GroupeProjet,
+    Entreprise, OffreStage, Competence, CV, EtudiantAutorise,
+)
+
+
+# ── GroupeProjet ─────────────────────────────────────────
+
+class GroupeProjetSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = GroupeProjet
+        fields = ['id', 'code', 'nom', 'description', 'couleur']
 
 
 # ── Auth ─────────────────────────────────────────────────
 
 class RegisterSerializer(serializers.Serializer):
-    """Inscription d'un étudiant ou d'un enseignant."""
+    """Inscription d'un étudiant, d'un enseignant ou d'une entreprise."""
     # Commun
-    role = serializers.ChoiceField(choices=['etudiant', 'enseignant'])
+    role = serializers.ChoiceField(choices=['etudiant', 'enseignant', 'entreprise'])
     username = serializers.CharField(max_length=150)
     email = serializers.EmailField()
     password = serializers.CharField(write_only=True, validators=[validate_password])
@@ -27,6 +38,13 @@ class RegisterSerializer(serializers.Serializer):
     departement = serializers.CharField(max_length=100, required=False, allow_blank=True)
     specialite = serializers.CharField(max_length=200, required=False, allow_blank=True)
     telephone = serializers.CharField(max_length=20, required=False, allow_blank=True)
+
+    # Entreprise (requis si role == 'entreprise')
+    nom_entreprise = serializers.CharField(max_length=200, required=False, allow_blank=True)
+    secteur = serializers.CharField(max_length=100, required=False, allow_blank=True)
+    ville = serializers.CharField(max_length=100, required=False, allow_blank=True)
+    tel_entreprise = serializers.CharField(max_length=20, required=False, allow_blank=True)
+    site_web = serializers.URLField(required=False, allow_blank=True)
 
     def validate_username(self, value):
         if User.objects.filter(username=value).exists():
@@ -52,9 +70,34 @@ class RegisterSerializer(serializers.Serializer):
                 raise serializers.ValidationError({"niveau": "Le niveau est requis pour un étudiant."})
             if not attrs.get('promotion'):
                 raise serializers.ValidationError({"promotion": "La promotion est requise pour un étudiant."})
-            # Unicité du matricule
+            # Unicite du matricule
             if Etudiant.objects.filter(matricule=attrs['matricule']).exists():
                 raise serializers.ValidationError({"matricule": "Ce matricule est déjà enregistré."})
+            # Validation email institutionnel ESI
+            email = attrs.get('email', '')
+            if not email.endswith('@esi.unb.bf'):
+                raise serializers.ValidationError(
+                    {"email": "Les étudiants doivent utiliser leur email institutionnel (@esi.unb.bf)."}
+                )
+
+            # Validation contre la liste officielle (si elle est renseignée)
+            if EtudiantAutorise.objects.exists():
+                matricule = attrs.get('matricule')
+                autorise = EtudiantAutorise.objects.filter(
+                    matricule=matricule,
+                    email_institutionnel__iexact=email,
+                    actif=True,
+                ).exists()
+                if not autorise:
+                    raise serializers.ValidationError({
+                        "non_field_errors": [
+                            "Inscription refusée : matricule/email non présents dans la liste des étudiants autorisés."
+                        ]
+                    })
+
+        if attrs.get('role') == 'entreprise':
+            if not attrs.get('nom_entreprise'):
+                raise serializers.ValidationError({"nom_entreprise": "Le nom de l'entreprise est requis."})
 
         return attrs
 
@@ -76,12 +119,22 @@ class RegisterSerializer(serializers.Serializer):
                 niveau=validated_data['niveau'],
                 promotion=validated_data['promotion'],
             )
-        else:
+        elif role == 'enseignant':
             Enseignant.objects.create(
                 user=user,
                 departement=validated_data.get('departement', ''),
                 specialite=validated_data.get('specialite', ''),
                 telephone=validated_data.get('telephone', ''),
+            )
+        elif role == 'entreprise':
+            Entreprise.objects.create(
+                user=user,
+                nom=validated_data.get('nom_entreprise', ''),
+                secteur=validated_data.get('secteur', ''),
+                ville=validated_data.get('ville', 'Bobo-Dioulasso'),
+                telephone=validated_data.get('tel_entreprise', ''),
+                site_web=validated_data.get('site_web') or None,
+                est_valide=False,
             )
 
         return user
@@ -92,16 +145,20 @@ class UserProfileSerializer(serializers.ModelSerializer):
     role = serializers.SerializerMethodField()
     etudiant = serializers.SerializerMethodField()
     enseignant = serializers.SerializerMethodField()
+    entreprise = serializers.SerializerMethodField()
 
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'role', 'etudiant', 'enseignant']
+        fields = ['id', 'username', 'email', 'first_name', 'last_name',
+                  'role', 'etudiant', 'enseignant', 'entreprise']
 
     def get_role(self, obj):
         if hasattr(obj, 'etudiant_profile'):
             return 'etudiant'
         if hasattr(obj, 'enseignant_profile'):
             return 'enseignant'
+        if hasattr(obj, 'entreprise_profile'):
+            return 'entreprise'
         if obj.is_staff:
             return 'admin'
         return 'visiteur'
@@ -125,6 +182,18 @@ class UserProfileSerializer(serializers.ModelSerializer):
                 'id': e.id,
                 'departement': e.departement,
                 'specialite': e.specialite,
+            }
+        return None
+
+    def get_entreprise(self, obj):
+        if hasattr(obj, 'entreprise_profile'):
+            e = obj.entreprise_profile
+            return {
+                'id': e.id,
+                'nom': e.nom,
+                'secteur': e.secteur,
+                'ville': e.ville,
+                'est_valide': e.est_valide,
             }
         return None
 
@@ -161,7 +230,7 @@ class StageSubmitSerializer(serializers.ModelSerializer):
             'titre', 'description', 'entreprise', 'ville', 'pays',
             'type_stage', 'technologies', 'annee_universitaire',
             'date_debut', 'date_fin', 'image', 'lien_entreprise',
-            'maitre_stage',
+            'maitre_stage', 'niveau_academique', 'duree',
         ]
 
     def create(self, validated_data):
@@ -206,13 +275,14 @@ class ProjetListSerializer(serializers.ModelSerializer):
     tuteur_nom = serializers.SerializerMethodField()
     etudiants_noms = serializers.SerializerMethodField()
     technologies_list = serializers.ReadOnlyField()
+    groupe = GroupeProjetSerializer(read_only=True)
 
     class Meta:
         model = Projet
         fields = [
             'id', 'titre', 'description', 'type_projet', 'statut',
             'technologies', 'technologies_list', 'annee_universitaire',
-            'date_soumission', 'image', 'tuteur_nom', 'etudiants_noms',
+            'date_soumission', 'image', 'tuteur_nom', 'etudiants_noms', 'groupe',
         ]
 
     def get_tuteur_nom(self, obj):
@@ -232,6 +302,7 @@ class ProjetDetailSerializer(serializers.ModelSerializer):
     tuteur = EnseignantSerializer(read_only=True)
     etudiants = EtudiantSerializer(many=True, read_only=True)
     technologies_list = serializers.ReadOnlyField()
+    groupe = GroupeProjetSerializer(read_only=True)
 
     class Meta:
         model = Projet
@@ -240,7 +311,7 @@ class ProjetDetailSerializer(serializers.ModelSerializer):
             'technologies', 'technologies_list', 'annee_universitaire',
             'date_soumission', 'date_modification',
             'image', 'document', 'lien_github', 'lien_demo',
-            'etudiants', 'tuteur',
+            'etudiants', 'tuteur', 'groupe',
         ]
 
 
@@ -259,6 +330,7 @@ class StageListSerializer(serializers.ModelSerializer):
             'type_stage', 'statut', 'technologies', 'technologies_list',
             'annee_universitaire', 'date_debut', 'date_fin', 'date_creation',
             'image', 'etudiant_nom', 'tuteur_nom', 'maitre_stage',
+            'niveau_academique', 'duree',
         ]
 
     def get_etudiant_nom(self, obj):
@@ -284,6 +356,7 @@ class StageDetailSerializer(serializers.ModelSerializer):
             'annee_universitaire', 'date_debut', 'date_fin', 'date_creation',
             'image', 'rapport', 'lien_entreprise',
             'etudiant', 'tuteur_academique', 'maitre_stage',
+            'niveau_academique', 'duree',
         ]
 
 
@@ -365,3 +438,166 @@ class StageValidationSerializer(serializers.ModelSerializer):
                 f"Statut invalide. Valeurs autorisées : {', '.join(allowed)}"
             )
         return value
+
+# ── Entreprise & Offres de Stage ───────────────────────────────
+
+class EntrepriseSerializer(serializers.ModelSerializer):
+    """Profil public d'une entreprise."""
+    email = serializers.SerializerMethodField()
+    nb_offres = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Entreprise
+        fields = [
+            'id', 'nom', 'secteur', 'description', 'adresse',
+            'ville', 'pays', 'telephone', 'site_web', 'logo',
+            'est_valide', 'date_inscription', 'email', 'nb_offres',
+        ]
+
+    def get_email(self, obj):
+        return obj.user.email
+
+    def get_nb_offres(self, obj):
+        return obj.offres.filter(statut='OUVERT').count()
+
+
+class EntrepriseUpdateSerializer(serializers.ModelSerializer):
+    """Serializer pour la mise à jour du profil entreprise."""
+
+    class Meta:
+        model = Entreprise
+        fields = [
+            'nom', 'secteur', 'description', 'adresse',
+            'ville', 'pays', 'telephone', 'site_web', 'logo',
+        ]
+
+
+class OffreStageListSerializer(serializers.ModelSerializer):
+    """Serializer allégé pour la liste des offres."""
+    entreprise_nom = serializers.SerializerMethodField()
+    entreprise_ville = serializers.SerializerMethodField()
+    entreprise_logo = serializers.SerializerMethodField()
+    technologies_list = serializers.ReadOnlyField()
+
+    class Meta:
+        model = OffreStage
+        fields = [
+            'id', 'titre', 'description', 'type_stage', 'niveau_academique',
+            'duree', 'technologies', 'technologies_list', 'date_debut',
+            'date_limite_candidature', 'remuneration', 'statut', 'date_creation',
+            'entreprise_nom', 'entreprise_ville', 'entreprise_logo',
+        ]
+
+    def get_entreprise_nom(self, obj):
+        return obj.entreprise.nom
+
+    def get_entreprise_ville(self, obj):
+        return obj.entreprise.ville
+
+    def get_entreprise_logo(self, obj):
+        if obj.entreprise.logo:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.entreprise.logo.url)
+        return None
+
+
+class OffreStageDetailSerializer(serializers.ModelSerializer):
+    """Serializer complet pour le détail d'une offre."""
+    entreprise = EntrepriseSerializer(read_only=True)
+    technologies_list = serializers.ReadOnlyField()
+
+    class Meta:
+        model = OffreStage
+        fields = [
+            'id', 'titre', 'description', 'type_stage', 'niveau_academique',
+            'duree', 'technologies', 'technologies_list', 'date_debut',
+            'date_limite_candidature', 'remuneration', 'statut',
+            'date_creation', 'date_modification', 'entreprise',
+        ]
+
+
+class OffreStageCreateSerializer(serializers.ModelSerializer):
+    """Serializer pour créer/modifier une offre (entreprise connectée)."""
+
+    class Meta:
+        model = OffreStage
+        fields = [
+            'titre', 'description', 'type_stage', 'niveau_academique',
+            'duree', 'technologies', 'date_debut',
+            'date_limite_candidature', 'remuneration',
+        ]
+
+    def create(self, validated_data):
+        request = self.context['request']
+        entreprise = request.user.entreprise_profile
+        return OffreStage.objects.create(**validated_data, entreprise=entreprise, statut='OUVERT')
+
+    def update(self, instance, validated_data):
+        for field, value in validated_data.items():
+            setattr(instance, field, value)
+        instance.save()
+        return instance
+
+
+# ── CV Étudiant ─────────────────────────────────────────
+
+class CompetenceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Competence
+        fields = ['id', 'nom', 'categorie']
+
+
+class CVSerializer(serializers.ModelSerializer):
+    etudiant = EtudiantSerializer(read_only=True)
+    competences = CompetenceSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = CV
+        fields = [
+            'id', 'etudiant', 'titre', 'resume', 'competences',
+            'cv_pdf', 'linkedin', 'github', 'portfolio',
+            'disponible_pour_stage', 'date_creation', 'date_modification',
+        ]
+
+
+class CVUpsertSerializer(serializers.ModelSerializer):
+    competence_ids = serializers.ListField(
+        child=serializers.IntegerField(min_value=1),
+        required=False,
+        allow_empty=True,
+        write_only=True,
+    )
+
+    class Meta:
+        model = CV
+        fields = [
+            'titre', 'resume', 'cv_pdf', 'linkedin', 'github', 'portfolio',
+            'disponible_pour_stage', 'competence_ids',
+        ]
+
+    def validate_competence_ids(self, value):
+        if not value:
+            return []
+        found = set(Competence.objects.filter(id__in=value).values_list('id', flat=True))
+        missing = [cid for cid in value if cid not in found]
+        if missing:
+            raise serializers.ValidationError(f"Compétences inexistantes: {missing}")
+        return value
+
+    def create(self, validated_data):
+        competence_ids = validated_data.pop('competence_ids', [])
+        etudiant = self.context['request'].user.etudiant_profile
+        cv = CV.objects.create(etudiant=etudiant, **validated_data)
+        if competence_ids:
+            cv.competences.set(competence_ids)
+        return cv
+
+    def update(self, instance, validated_data):
+        competence_ids = validated_data.pop('competence_ids', None)
+        for field, value in validated_data.items():
+            setattr(instance, field, value)
+        instance.save()
+        if competence_ids is not None:
+            instance.competences.set(competence_ids)
+        return instance

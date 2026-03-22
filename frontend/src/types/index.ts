@@ -27,6 +27,36 @@ export interface Etudiant {
   promotion: number;
 }
 
+// ── Groupes de Projets ────────────────────────────────────
+
+export type CodeGroupe = 'SI' | 'RS' | 'ADMIN_RESEAUX' | 'SUPERVISION' | 'SECURITE' | 'AUTRES';
+
+export interface GroupeProjet {
+  id: number;
+  code: CodeGroupe;
+  nom: string;
+  description: string;
+  couleur: string;
+}
+
+export const GROUPE_LABELS: Record<CodeGroupe, string> = {
+  SI: 'Systèmes Informatiques',
+  RS: 'Réseaux et Systèmes',
+  ADMIN_RESEAUX: 'Administration Réseaux',
+  SUPERVISION: 'Supervision',
+  SECURITE: 'Sécurité',
+  AUTRES: 'Autres',
+};
+
+export const GROUPE_COLORS: Record<CodeGroupe, string> = {
+  SI: 'bg-blue-100 text-blue-800',
+  RS: 'bg-green-100 text-green-800',
+  ADMIN_RESEAUX: 'bg-purple-100 text-purple-800',
+  SUPERVISION: 'bg-orange-100 text-orange-800',
+  SECURITE: 'bg-red-100 text-red-800',
+  AUTRES: 'bg-gray-100 text-gray-800',
+};
+
 // ── Auth ────────────────────────────────────────────────
 
 export interface AuthTokens {
@@ -40,7 +70,7 @@ export interface UserProfile {
   email: string;
   first_name: string;
   last_name: string;
-  role: 'etudiant' | 'enseignant' | 'admin' | 'visiteur';
+  role: 'etudiant' | 'enseignant' | 'entreprise' | 'admin' | 'visiteur';
   etudiant: {
     id: number;
     matricule: string;
@@ -53,6 +83,13 @@ export interface UserProfile {
     departement: string;
     specialite: string;
   } | null;
+  entreprise: {
+    id: number;
+    nom: string;
+    secteur: string;
+    ville: string;
+    est_valide: boolean;
+  } | null;
 }
 
 export interface LoginCredentials {
@@ -61,7 +98,7 @@ export interface LoginCredentials {
 }
 
 export interface RegisterData {
-  role: 'etudiant' | 'enseignant';
+  role: 'etudiant' | 'enseignant' | 'entreprise';
   username: string;
   email: string;
   password: string;
@@ -77,6 +114,12 @@ export interface RegisterData {
   departement?: string;
   specialite?: string;
   telephone?: string;
+  // Entreprise
+  nom_entreprise?: string;
+  secteur?: string;
+  ville?: string;
+  tel_entreprise?: string;
+  site_web?: string;
 }
 
 export interface DashboardData {
@@ -140,6 +183,22 @@ export interface EnseignantDashboardData {
   stages: Stage[];
 }
 
+export interface AdminDashboardData {
+  stats: {
+    total_etudiants: number;
+    total_enseignants: number;
+    total_entreprises: number;
+    total_projets: number;
+    total_stages: number;
+    projets_en_attente: number;
+    stages_en_attente: number;
+    entreprises_en_attente: number;
+  };
+  projets_en_attente: Projet[];
+  stages_en_attente: Stage[];
+  entreprises_en_attente: Entreprise[];
+}
+
 export type TypeProjet = 'PFE' | 'PFA' | 'MINI' | 'STAGE';
 export type StatutProjet = 'EN_ATTENTE' | 'VALIDE' | 'REFUSE' | 'EN_COURS' | 'TERMINE' | 'ARCHIVE';
 
@@ -160,6 +219,7 @@ export interface Projet {
   lien_demo?: string | null;
   tuteur_nom?: string | null;
   etudiants_noms?: string[];
+  groupe?: GroupeProjet | null;
   // Détail complet
   tuteur?: Enseignant | null;
   etudiants?: Etudiant[];
@@ -169,6 +229,15 @@ export interface Projet {
 
 export type TypeStage = 'OBSERVATION' | 'TECHNICIEN' | 'INGENIEUR' | 'PFE';
 export type StatutStage = 'EN_ATTENTE' | 'EN_COURS' | 'TERMINE' | 'ARCHIVE';
+
+export type NiveauAcademique = 'LICENCE' | 'IT' | 'MASTER' | 'IC';
+
+export const NIVEAU_ACADEMIQUE_LABELS: Record<NiveauAcademique, string> = {
+  LICENCE: 'Licence',
+  IT: 'IT (Ingénieur des Travaux)',
+  MASTER: 'Master',
+  IC: 'IC (Ingénieur Concepteur)',
+};
 
 export interface Stage {
   id: number;
@@ -191,6 +260,8 @@ export interface Stage {
   etudiant_nom?: string;
   tuteur_nom?: string | null;
   maitre_stage?: string;
+  niveau_academique?: NiveauAcademique | '';
+  duree?: number | null;
   // Détail complet
   etudiant?: Etudiant;
   tuteur_academique?: Enseignant | null;
@@ -245,3 +316,114 @@ export const STATUT_STAGE_LABELS: Record<StatutStage, string> = {
   TERMINE: 'Terminé',
   ARCHIVE: 'Archivé',
 };
+
+// ── Entreprises & Offres de Stage ────────────────────────
+
+export interface Entreprise {
+  id: number;
+  nom: string;
+  secteur: string;
+  description: string;
+  adresse: string;
+  ville: string;
+  pays: string;
+  telephone: string;
+  site_web: string;
+  logo: string | null;
+  email: string;
+  est_valide: boolean;
+  nb_offres: number;
+  date_inscription: string;
+}
+
+export type TypeOffre = 'OBSERVATION' | 'TECHNICIEN' | 'INGENIEUR' | 'PFE';
+export type NiveauOffre = 'LICENCE' | 'IT' | 'MASTER' | 'IC';
+export type StatutOffre = 'OUVERT' | 'FERME' | 'ARCHIVE';
+
+export interface OffreStage {
+  id: number;
+  entreprise: Entreprise;
+  entreprise_nom: string;
+  entreprise_ville: string;
+  entreprise_logo: string | null;
+  titre: string;
+  description: string;
+  type_stage: TypeOffre;
+  niveau_academique: NiveauOffre;
+  duree: number;
+  technologies: string;
+  technologies_list: string[];
+  date_debut: string | null;
+  date_limite_candidature: string | null;
+  remuneration: string;
+  statut: StatutOffre;
+  date_creation: string;
+  date_modification: string;
+}
+
+export interface OffreStageFormData {
+  titre: string;
+  description: string;
+  type_stage: TypeOffre;
+  niveau_academique: NiveauOffre;
+  duree: number;
+  technologies: string;
+  date_debut?: string;
+  date_limite_candidature?: string;
+  remuneration?: string;
+}
+
+export const TYPE_OFFRE_LABELS: Record<TypeOffre, string> = {
+  OBSERVATION: "Stage d'observation",
+  TECHNICIEN: 'Stage technicien',
+  INGENIEUR: 'Stage ingénieur',
+  PFE: 'Stage PFE',
+};
+
+export const STATUT_OFFRE_LABELS: Record<StatutOffre, string> = {
+  OUVERT: 'Ouvert',
+  FERME: 'Fermé',
+  ARCHIVE: 'Archivé',
+};
+
+export const STATUT_OFFRE_COLORS: Record<StatutOffre, string> = {
+  OUVERT: 'bg-green-100 text-green-800',
+  FERME: 'bg-red-100 text-red-800',
+  ARCHIVE: 'bg-gray-100 text-gray-800',
+};
+
+export const NIVEAU_OFFRE_LABELS: Record<NiveauOffre, string> = {
+  LICENCE: 'Licence',
+  IT: 'IT (Ingénieur des Travaux)',
+  MASTER: 'Master',
+  IC: 'IC (Ingénieur Concepteur)',
+};
+
+// ── CV Étudiant ─────────────────────────────────────────
+
+export interface Competence {
+  id: number;
+  nom: string;
+  categorie: string;
+}
+
+export interface CV {
+  id: number;
+  etudiant: Etudiant;
+  titre: string;
+  resume: string;
+  competences: Competence[];
+  cv_pdf: string | null;
+  linkedin: string | null;
+  github: string | null;
+  portfolio: string | null;
+  disponible_pour_stage: boolean;
+  date_creation: string;
+  date_modification: string;
+}
+
+export interface ProfilMatchingResult {
+  cv: CV;
+  score: number;
+  matched_competences: string[];
+}

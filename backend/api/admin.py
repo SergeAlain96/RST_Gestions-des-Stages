@@ -2,7 +2,74 @@ import csv
 from django.contrib import admin
 from django.http import HttpResponse
 from django.utils import timezone
-from .models import Projet, Etudiant, Enseignant, Stage, Evaluation
+from .models import (
+    Projet, Etudiant, Enseignant, Stage, Evaluation, GroupeProjet,
+    Entreprise, OffreStage, CV, Competence, EtudiantAutorise,
+)
+
+
+@admin.register(GroupeProjet)
+class GroupeProjetAdmin(admin.ModelAdmin):
+    """Administration des groupes / filières de projets."""
+    list_display = ['code', 'nom', 'couleur']
+    search_fields = ['code', 'nom']
+    ordering = ['code']
+
+
+@admin.register(Entreprise)
+class EntrepriseAdmin(admin.ModelAdmin):
+    """Administration des comptes entreprise."""
+    list_display = ['nom', 'secteur', 'ville', 'pays', 'est_valide', 'date_inscription']
+    list_filter = ['est_valide', 'secteur', 'pays']
+    search_fields = ['nom', 'secteur', 'ville', 'user__email']
+    list_editable = ['est_valide']
+    ordering = ['-date_inscription']
+    readonly_fields = ['date_inscription']
+    fieldsets = (
+        ('Compte', {'fields': ('user', 'est_valide')}),
+        ('Informations', {'fields': ('nom', 'secteur', 'description', 'logo')}),
+        ('Contact', {'fields': ('adresse', 'ville', 'pays', 'telephone', 'site_web')}),
+        ('Métadonnées', {'fields': ('date_inscription',)}),
+    )
+
+
+@admin.register(OffreStage)
+class OffreStageAdmin(admin.ModelAdmin):
+    """Administration des offres de stage."""
+    list_display = ['titre', 'entreprise', 'type_stage', 'niveau_academique', 'statut', 'date_limite_candidature', 'date_creation']
+    list_filter = ['statut', 'type_stage', 'niveau_academique']
+    search_fields = ['titre', 'description', 'technologies', 'entreprise__nom']
+    list_editable = ['statut']
+    ordering = ['-date_creation']
+    readonly_fields = ['date_creation', 'date_modification']
+    raw_id_fields = ['entreprise']
+
+
+@admin.register(Competence)
+class CompetenceAdmin(admin.ModelAdmin):
+    list_display = ['nom', 'categorie']
+    list_filter = ['categorie']
+    search_fields = ['nom', 'categorie']
+    ordering = ['nom']
+
+
+@admin.register(CV)
+class CVAdmin(admin.ModelAdmin):
+    list_display = ['etudiant', 'titre', 'disponible_pour_stage', 'date_modification']
+    list_filter = ['disponible_pour_stage', 'etudiant__filiere', 'etudiant__niveau']
+    search_fields = ['etudiant__user__first_name', 'etudiant__user__last_name', 'resume']
+    filter_horizontal = ['competences']
+    readonly_fields = ['date_creation', 'date_modification']
+
+
+@admin.register(EtudiantAutorise)
+class EtudiantAutoriseAdmin(admin.ModelAdmin):
+    list_display = ['matricule', 'email_institutionnel', 'nom', 'prenom', 'actif', 'date_ajout']
+    list_filter = ['actif']
+    search_fields = ['matricule', 'email_institutionnel', 'nom', 'prenom']
+    list_editable = ['actif']
+    readonly_fields = ['date_ajout']
+
 
 
 # ── Actions d'export CSV réutilisables ───────────────────

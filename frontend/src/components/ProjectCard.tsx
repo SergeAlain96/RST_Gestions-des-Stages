@@ -4,6 +4,7 @@ import {
   TYPE_PROJET_LABELS,
   STATUT_PROJET_LABELS,
   STATUT_COLORS,
+  GROUPE_COLORS,
 } from '../types';
 
 interface ProjectCardProps {
@@ -53,10 +54,15 @@ export default function ProjectCard({ projet }: ProjectCardProps) {
 
       {/* Contenu */}
       <div className="p-5 flex flex-col flex-1">
-        <div className="flex items-center gap-2 mb-2">
+        <div className="flex items-center gap-2 mb-2 flex-wrap">
           <span className="text-xs font-medium text-blue-600 bg-blue-50 px-2 py-0.5 rounded">
             {TYPE_PROJET_LABELS[projet.type_projet]}
           </span>
+          {projet.groupe && (
+            <span className={`text-xs font-medium px-2 py-0.5 rounded ${GROUPE_COLORS[projet.groupe.code] ?? 'bg-gray-100 text-gray-700'}`}>
+              {projet.groupe.nom}
+            </span>
+          )}
           <span className="text-xs text-gray-400">
             {projet.annee_universitaire}
           </span>

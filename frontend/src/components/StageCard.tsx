@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import type { Stage } from '../types';
-import { TYPE_STAGE_LABELS, STATUT_STAGE_LABELS, STATUT_COLORS } from '../types';
+import { TYPE_STAGE_LABELS, STATUT_STAGE_LABELS, STATUT_COLORS, NIVEAU_ACADEMIQUE_LABELS } from '../types';
 
 interface StageCardProps {
   stage: Stage;
@@ -46,10 +46,20 @@ export default function StageCard({ stage }: StageCardProps) {
 
       {/* Contenu */}
       <div className="p-5 flex flex-col flex-1">
-        <div className="flex items-center gap-2 mb-2">
+        <div className="flex items-center gap-2 mb-2 flex-wrap">
           <span className="text-xs font-medium text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">
             {TYPE_STAGE_LABELS[stage.type_stage]}
           </span>
+          {stage.niveau_academique && (
+            <span className="text-xs font-medium text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">
+              {NIVEAU_ACADEMIQUE_LABELS[stage.niveau_academique]}
+            </span>
+          )}
+          {stage.duree && (
+            <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
+              {stage.duree} sem.
+            </span>
+          )}
           <span className="text-xs text-gray-400">{stage.annee_universitaire}</span>
         </div>
 

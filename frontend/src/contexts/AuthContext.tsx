@@ -13,6 +13,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isEtudiant: boolean;
   isEnseignant: boolean;
+  isEntreprise: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -76,6 +77,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isAuthenticated: !!user,
     isEtudiant: user?.role === 'etudiant',
     isEnseignant: user?.role === 'enseignant',
+    isEntreprise: user?.role === 'entreprise',
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

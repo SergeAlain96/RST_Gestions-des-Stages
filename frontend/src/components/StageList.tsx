@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import type { Stage, TypeStage, StatutStage } from '../types';
-import { TYPE_STAGE_LABELS, STATUT_STAGE_LABELS } from '../types';
+import type { Stage, TypeStage, StatutStage, NiveauAcademique } from '../types';
+import { TYPE_STAGE_LABELS, STATUT_STAGE_LABELS, NIVEAU_ACADEMIQUE_LABELS } from '../types';
 import { stageService } from '../services/api';
 import StageCard from './StageCard';
 import { StageCardSkeleton } from './Skeletons';
@@ -16,6 +16,7 @@ export default function StageList() {
   const [typeStage, setTypeStage] = useState('');
   const [statut, setStatut] = useState('');
   const [entreprise, setEntreprise] = useState('');
+  const [niveauAcademique, setNiveauAcademique] = useState('');
   const [showFilters, setShowFilters] = useState(false);
 
   // Options dynamiques
@@ -35,6 +36,7 @@ export default function StageList() {
           type_stage: typeStage || undefined,
           statut: statut || undefined,
           entreprise: entreprise || undefined,
+          niveau_academique: niveauAcademique || undefined,
         });
         setStages(data?.results ?? []);
         setTotalCount(data?.count ?? 0);
@@ -48,14 +50,15 @@ export default function StageList() {
 
     const debounce = setTimeout(fetchStages, 300);
     return () => clearTimeout(debounce);
-  }, [search, typeStage, statut, entreprise]);
+  }, [search, typeStage, statut, entreprise, niveauAcademique]);
 
-  const activeFiltersCount = [typeStage, statut, entreprise].filter(Boolean).length;
+  const activeFiltersCount = [typeStage, statut, entreprise, niveauAcademique].filter(Boolean).length;
 
   const clearFilters = () => {
     setTypeStage('');
     setStatut('');
     setEntreprise('');
+    setNiveauAcademique('');
     setSearch('');
   };
 
@@ -105,7 +108,7 @@ export default function StageList() {
 
         {showFilters && (
           <div className="bg-white border border-gray-200 rounded-xl p-5 mb-6 shadow-sm">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <div>
                 <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Type de stage</label>
                 <select
@@ -142,6 +145,19 @@ export default function StageList() {
                   <option value="">Toutes les entreprises</option>
                   {entreprises.map((e) => (
                     <option key={e} value={e}>{e}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Niveau académique</label>
+                <select
+                  value={niveauAcademique}
+                  onChange={(e) => setNiveauAcademique(e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none"
+                >
+                  <option value="">Tous les niveaux</option>
+                  {(Object.keys(NIVEAU_ACADEMIQUE_LABELS) as NiveauAcademique[]).map((key) => (
+                    <option key={key} value={key}>{NIVEAU_ACADEMIQUE_LABELS[key]}</option>
                   ))}
                 </select>
               </div>

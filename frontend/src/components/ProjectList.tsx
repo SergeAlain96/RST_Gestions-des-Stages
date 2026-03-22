@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import type { Projet, TypeProjet, StatutProjet } from '../types';
-import { TYPE_PROJET_LABELS, STATUT_PROJET_LABELS } from '../types';
-import { projetService } from '../services/api';
+import type { Projet, TypeProjet, StatutProjet, GroupeProjet } from '../types';
+import { TYPE_PROJET_LABELS, STATUT_PROJET_LABELS, GROUPE_COLORS } from '../types';
+import { projetService, groupeService } from '../services/api';
 import ProjectCard from './ProjectCard';
 import { ProjectCardSkeleton } from './Skeletons';
 
@@ -21,16 +21,19 @@ export default function ProjectList({ showTitle = true }: ProjectListProps) {
   const [statut, setStatut] = useState('');
   const [annee, setAnnee] = useState('');
   const [techno, setTechno] = useState('');
+  const [groupe, setGroupe] = useState('');
 
   // Options dynamiques
   const [annees, setAnnees] = useState<string[]>([]);
   const [technologies, setTechnologies] = useState<string[]>([]);
+  const [groupes, setGroupes] = useState<GroupeProjet[]>([]);
   const [showFilters, setShowFilters] = useState(false);
 
   // Charger les options de filtres
   useEffect(() => {
     projetService.getAnnees().then(setAnnees).catch(() => {});
     projetService.getTechnologies().then(setTechnologies).catch(() => {});
+    groupeService.getAll().then(setGroupes).catch(() => {});
   }, []);
 
   // Charger les projets
@@ -45,6 +48,7 @@ export default function ProjectList({ showTitle = true }: ProjectListProps) {
           statut: statut || undefined,
           annee_universitaire: annee || undefined,
           technologies: techno || undefined,
+          groupe: groupe || undefined,
         });
         setProjets(data?.results ?? []);
         setTotalCount(data?.count ?? 0);
@@ -58,15 +62,16 @@ export default function ProjectList({ showTitle = true }: ProjectListProps) {
 
     const debounce = setTimeout(fetchProjets, 300);
     return () => clearTimeout(debounce);
-  }, [search, typeProjet, statut, annee, techno]);
+  }, [search, typeProjet, statut, annee, techno, groupe]);
 
-  const activeFiltersCount = [typeProjet, statut, annee, techno].filter(Boolean).length;
+  const activeFiltersCount = [typeProjet, statut, annee, techno, groupe].filter(Boolean).length;
 
   const clearFilters = () => {
     setTypeProjet('');
     setStatut('');
     setAnnee('');
     setTechno('');
+    setGroupe('');
     setSearch('');
   };
 
@@ -174,6 +179,35 @@ export default function ProjectList({ showTitle = true }: ProjectListProps) {
                 </select>
               </div>
             </div>
+            {/* Filtre Groupe / Filière */}
+            {groupes.length > 0 && (
+              <div className="mt-4 pt-4 border-t border-gray-100">
+                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Filière / Groupe</label>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={() => setGroupe('')}
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                      groupe === '' ? 'bg-gray-900 text-white border-gray-900' : 'border-gray-300 text-gray-600 hover:border-gray-400'
+                    }`}
+                  >
+                    Tous
+                  </button>
+                  {groupes.map((g) => (
+                    <button
+                      key={g.code}
+                      onClick={() => setGroupe(g.code === groupe ? '' : g.code)}
+                      className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                        groupe === g.code
+                          ? GROUPE_COLORS[g.code] + ' border-transparent'
+                          : 'border-gray-300 text-gray-600 hover:border-gray-400'
+                      }`}
+                    >
+                      {g.nom}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
             {activeFiltersCount > 0 && (
               <div className="mt-4 pt-3 border-t border-gray-100 flex justify-end">
                 <button

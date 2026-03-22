@@ -23,6 +23,29 @@ class IsEnseignant(BasePermission):
         )
 
 
+class IsEntreprise(BasePermission):
+    """Autorise uniquement les utilisateurs ayant un profil entreprise validé."""
+
+    def has_permission(self, request, view):
+        return (
+            request.user
+            and request.user.is_authenticated
+            and hasattr(request.user, 'entreprise_profile')
+        )
+
+
+class IsEntrepriseValide(BasePermission):
+    """Autorise uniquement les entreprises dont le compte est validé par un admin."""
+
+    def has_permission(self, request, view):
+        return (
+            request.user
+            and request.user.is_authenticated
+            and hasattr(request.user, 'entreprise_profile')
+            and request.user.entreprise_profile.est_valide
+        )
+
+
 class IsOwnerEtudiant(BasePermission):
     """Vérifie que l'étudiant est bien associé au projet."""
 

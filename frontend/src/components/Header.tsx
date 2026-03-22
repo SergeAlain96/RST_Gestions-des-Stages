@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function Header() {
-  const { user, isAuthenticated, isEtudiant, isEnseignant, logout } = useAuth();
+  const { user, isAuthenticated, isEtudiant, isEnseignant, isEntreprise, logout } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -21,29 +21,35 @@ export default function Header() {
     <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
-          {/* Logo & Titre */}
+          {/* Logo & Titre ESI */}
           <Link to="/" className="flex items-center gap-3 group">
-            <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-lg flex items-center justify-center shadow-md group-hover:shadow-lg transition-shadow">
-              <span className="text-white font-bold text-lg">R</span>
+            <div className="w-10 h-10 bg-gradient-to-br from-green-700 to-green-900 rounded-lg flex items-center justify-center shadow-md group-hover:shadow-lg transition-shadow">
+              <span className="text-white font-bold text-sm tracking-tight">ESI</span>
             </div>
             <div>
               <h1 className="text-xl font-bold text-gray-900 leading-tight">
-                RST <span className="text-blue-600">Projets</span>
+                <span className="text-green-700">ESI</span> Portail
               </h1>
-              <p className="text-xs text-gray-500 -mt-0.5">Plateforme de Gestion</p>
+              <p className="text-xs text-gray-500 -mt-0.5">École Supérieure d’Informatique — UNB</p>
             </div>
           </Link>
 
           {/* Navigation desktop */}
           <nav className="hidden md:flex items-center gap-1">
-            <Link to="/" className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
+            <Link to="/" className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-green-700 hover:bg-green-50 rounded-lg transition-colors">
               Accueil
             </Link>
-            <Link to="/projets" className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
+            <Link to="/projets" className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-green-700 hover:bg-green-50 rounded-lg transition-colors">
               Projets
             </Link>
-            <Link to="/stages" className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors">
-              Stages
+            <Link to="/stages" className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-green-700 hover:bg-green-50 rounded-lg transition-colors">
+              Stages &amp; Emplois
+            </Link>
+            <Link to="/offres" className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-green-700 hover:bg-green-50 rounded-lg transition-colors">
+              Offres de Stage
+            </Link>
+            <Link to="/profils-etudiants" className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-green-700 hover:bg-green-50 rounded-lg transition-colors">
+              Profils Étudiants
             </Link>
           </nav>
 
@@ -55,7 +61,7 @@ export default function Header() {
                   onClick={() => setMenuOpen(!menuOpen)}
                   className="flex items-center gap-2 pl-3 pr-2 py-1.5 rounded-lg hover:bg-gray-100 transition-colors"
                 >
-                  <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white text-xs font-bold">
+                  <div className="w-8 h-8 bg-gradient-to-br from-green-600 to-green-800 rounded-full flex items-center justify-center text-white text-xs font-bold">
                     {user.first_name?.[0]}{user.last_name?.[0]}
                   </div>
                   <span className="text-sm font-medium text-gray-700 max-w-[120px] truncate">
@@ -83,6 +89,9 @@ export default function Header() {
                         <Link to="/submit/stage" onClick={() => setMenuOpen(false)} className="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50">
                           <span>🏢</span> Déposer un stage
                         </Link>
+                        <Link to="/profil-etudiant" onClick={() => setMenuOpen(false)} className="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50">
+                          <span>📄</span> Mon CV
+                        </Link>
                       </>
                     )}
                     {isEnseignant && (
@@ -94,6 +103,21 @@ export default function Header() {
                           <span>📝</span> Mes évaluations
                         </Link>
                       </>
+                    )}
+                    {isEntreprise && (
+                      <>
+                        <Link to="/entreprise" onClick={() => setMenuOpen(false)} className="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50">
+                          <span>📊</span> Mon Dashboard
+                        </Link>
+                        <Link to="/entreprise/offres/nouvelle" onClick={() => setMenuOpen(false)} className="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50">
+                          <span>➕</span> Publier une offre
+                        </Link>
+                      </>
+                    )}
+                    {user?.role === 'admin' && (
+                      <Link to="/admin/dashboard" onClick={() => setMenuOpen(false)} className="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50">
+                        <span>🛠️</span> Administration
+                      </Link>
                     )}
                     <div className="border-t border-gray-100">
                       <button
@@ -108,10 +132,10 @@ export default function Header() {
               </div>
             ) : (
               <>
-                <Link to="/login" className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
+                <Link to="/login" className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-green-700 hover:bg-green-50 rounded-lg transition-colors">
                   Connexion
                 </Link>
-                <Link to="/register" className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors shadow-sm">
+                <Link to="/register" className="px-4 py-2 text-sm font-medium text-white bg-green-700 hover:bg-green-800 rounded-lg transition-colors shadow-sm">
                   Inscription
                 </Link>
               </>
@@ -135,9 +159,11 @@ export default function Header() {
       {mobileOpen && (
         <div className="md:hidden border-t border-gray-200 bg-white pb-4">
           <div className="px-4 pt-2 space-y-1">
-            <Link to="/" onClick={() => setMobileOpen(false)} className="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-blue-50 rounded-lg">Accueil</Link>
-            <Link to="/projets" onClick={() => setMobileOpen(false)} className="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-blue-50 rounded-lg">Projets</Link>
-            <Link to="/stages" onClick={() => setMobileOpen(false)} className="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-emerald-50 rounded-lg">Stages</Link>
+            <Link to="/" onClick={() => setMobileOpen(false)} className="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-green-50 rounded-lg">Accueil</Link>
+            <Link to="/projets" onClick={() => setMobileOpen(false)} className="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-green-50 rounded-lg">Projets</Link>
+            <Link to="/stages" onClick={() => setMobileOpen(false)} className="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-green-50 rounded-lg">Stages &amp; Emplois</Link>
+            <Link to="/offres" onClick={() => setMobileOpen(false)} className="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-green-50 rounded-lg">Offres de Stage</Link>
+            <Link to="/profils-etudiants" onClick={() => setMobileOpen(false)} className="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-green-50 rounded-lg">Profils Étudiants</Link>
           </div>
           <div className="mt-3 px-4 pt-3 border-t border-gray-100 space-y-1">
             {isAuthenticated && user ? (
@@ -148,6 +174,7 @@ export default function Header() {
                     <Link to="/dashboard" onClick={() => setMobileOpen(false)} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-lg">📊 Mon Dashboard</Link>
                     <Link to="/submit/projet" onClick={() => setMobileOpen(false)} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-lg">📝 Déposer un projet</Link>
                     <Link to="/submit/stage" onClick={() => setMobileOpen(false)} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-lg">🏢 Déposer un stage</Link>
+                    <Link to="/profil-etudiant" onClick={() => setMobileOpen(false)} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-lg">📄 Mon CV</Link>
                   </>
                 )}
                 {isEnseignant && (
@@ -156,14 +183,23 @@ export default function Header() {
                     <Link to="/enseignant/evaluations" onClick={() => setMobileOpen(false)} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-lg">📝 Mes évaluations</Link>
                   </>
                 )}
+                {isEntreprise && (
+                  <>
+                    <Link to="/entreprise" onClick={() => setMobileOpen(false)} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-lg">📊 Mon Dashboard</Link>
+                    <Link to="/entreprise/offres/nouvelle" onClick={() => setMobileOpen(false)} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-lg">➕ Publier une offre</Link>
+                  </>
+                )}
+                {user?.role === 'admin' && (
+                  <Link to="/admin/dashboard" onClick={() => setMobileOpen(false)} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-lg">🛠️ Administration</Link>
+                )}
                 <button onClick={() => { setMobileOpen(false); logout(); }} className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg">
                   🚪 Déconnexion
                 </button>
               </>
             ) : (
               <>
-                <Link to="/login" onClick={() => setMobileOpen(false)} className="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-blue-50 rounded-lg">Connexion</Link>
-                <Link to="/register" onClick={() => setMobileOpen(false)} className="block px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg text-center">Inscription</Link>
+                <Link to="/login" onClick={() => setMobileOpen(false)} className="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-green-50 rounded-lg">Connexion</Link>
+                <Link to="/register" onClick={() => setMobileOpen(false)} className="block px-4 py-2 text-sm font-medium text-white bg-green-700 hover:bg-green-800 rounded-lg text-center">Inscription</Link>
               </>
             )}
           </div>
