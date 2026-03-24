@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import type { RegisterData } from '../types';
+import esiLogo from '../../Logo_esi_best (1).jpg';
 
 const FILIERES = [
   'Informatique',
@@ -51,6 +52,16 @@ export default function RegisterPage() {
   const isEnseignant = form.role === 'enseignant';
   const isEntreprise = form.role === 'entreprise';
 
+  const handleRoleChange = (role: RegisterData['role']) => {
+    setForm((prev) => ({
+      ...prev,
+      role,
+      ...(role === 'entreprise' ? { first_name: '', last_name: '' } : {}),
+    }));
+    setErrors({});
+    setGlobalError('');
+  };
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: name === 'promotion' ? Number(value) : value }));
@@ -63,13 +74,40 @@ export default function RegisterPage() {
     setErrors({});
     setLoading(true);
     try {
-      await register(form);
-      navigate(isEtudiant ? '/dashboard' : isEnseignant ? '/enseignant' : '/entreprise');
-    } catch (err: any) {
-      if (err.response?.data) {
-        const data = err.response.data;
+      const payload: RegisterData = { ...form };
+
+      // Pour les entreprises: masquer les champs personnels côté UI,
+      // mais fournir des valeurs backend valides automatiquement.
+      if (isEntreprise) {
+        const base = (form.nom_entreprise || form.email || 'entreprise')
+          .toLowerCase()
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .replace(/[^a-z0-9]+/g, '.')
+          .replace(/^\.+|\.+$/g, '') || 'entreprise';
+
+        payload.username = `${base}.${Date.now().toString().slice(-5)}`;
+        payload.first_name = 'Entreprise';
+        payload.last_name = form.nom_entreprise || 'Partenaire';
+      }
+
+      await register(payload);
+      if (isEtudiant) {
+        navigate('/dashboard');
+      } else if (isEnseignant) {
+        navigate('/enseignant');
+      } else {
+        navigate('/entreprise');
+      }
+    } catch (err: unknown) {
+      const data =
+        typeof err === 'object' && err !== null && 'response' in err
+          ? (err as { response?: { data?: unknown } }).response?.data
+          : undefined;
+
+      if (data && typeof data === 'object') {
         const fieldErrors: Record<string, string> = {};
-        for (const [key, val] of Object.entries(data)) {
+        for (const [key, val] of Object.entries(data as Record<string, unknown>)) {
           if (Array.isArray(val)) {
             fieldErrors[key] = val.join(' ');
           } else if (typeof val === 'string') {
@@ -94,14 +132,34 @@ export default function RegisterPage() {
       errors[field] ? 'border-red-400 bg-red-50' : 'border-gray-300'
     }`;
 
+  const submitLabel = isEtudiant
+    ? 'Créer mon compte étudiant'
+    : isEnseignant
+      ? 'Créer mon compte enseignant'
+      : 'Créer mon compte entreprise';
+
+  let submitButtonClass = 'bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800';
+  if (isEtudiant) {
+    submitButtonClass = 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700';
+  } else if (isEnseignant) {
+    submitButtonClass = 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700';
+  }
+
+  let emailPlaceholder = 'contact@entreprise.bf';
+  if (isEtudiant) {
+    emailPlaceholder = 'prenom.nom@esi.unb.bf';
+  } else if (isEnseignant) {
+    emailPlaceholder = 'prof.nom@esi.unb.bf';
+  }
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 px-4 py-8">
       <div className="w-full max-w-lg">
         {/* Logo */}
         <div className="text-center mb-6">
           <Link to="/" className="inline-flex items-center gap-3">
-            <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-xl flex items-center justify-center shadow-lg">
-              <span className="text-white font-bold text-xl">R</span>
+            <div className="w-12 h-12 rounded-xl overflow-hidden shadow-lg border border-gray-200 bg-white">
+              <img src={esiLogo} alt="Logo ESI" className="w-full h-full object-cover" />
             </div>
             <div className="text-left">
               <h1 className="text-2xl font-bold text-gray-900">RST <span className="text-blue-600">Projets</span></h1>
@@ -125,11 +183,11 @@ export default function RegisterPage() {
 
             {/* ─── Choix du rôle ─── */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Je suis :</label>
+              <p className="block text-sm font-medium text-gray-700 mb-2">Je suis :</p>
               <div className="grid grid-cols-3 gap-3">
                 <button
                   type="button"
-                  onClick={() => setForm((prev) => ({ ...prev, role: 'etudiant' }))}
+                  onClick={() => handleRoleChange('etudiant')}
                   className={`flex items-center gap-3 p-4 rounded-xl border-2 transition-all ${
                     isEtudiant
                       ? 'border-blue-500 bg-blue-50 shadow-md'
@@ -144,7 +202,7 @@ export default function RegisterPage() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setForm((prev) => ({ ...prev, role: 'enseignant' }))}
+                  onClick={() => handleRoleChange('enseignant')}
                   className={`flex items-center gap-3 p-4 rounded-xl border-2 transition-all ${
                     isEnseignant
                       ? 'border-purple-500 bg-purple-50 shadow-md'
@@ -159,7 +217,7 @@ export default function RegisterPage() {
                 </button>
                   <button
                     type="button"
-                    onClick={() => setForm((prev) => ({ ...prev, role: 'entreprise' }))}
+                    onClick={() => handleRoleChange('entreprise')}
                     className={`flex items-center gap-3 p-4 rounded-xl border-2 transition-all ${
                       isEntreprise
                         ? 'border-green-600 bg-green-50 shadow-md'
@@ -176,34 +234,40 @@ export default function RegisterPage() {
               {errors.role && <p className="text-red-500 text-xs mt-1">{errors.role}</p>}
             </div>
 
-            {/* ─── Identité ─── */}
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label htmlFor="first_name" className="block text-sm font-medium text-gray-700 mb-1">Prénom</label>
-                <input id="first_name" name="first_name" required value={form.first_name} onChange={handleChange} className={inputClass('first_name')} placeholder="Abdoulaye" />
-                {errors.first_name && <p className="text-red-500 text-xs mt-1">{errors.first_name}</p>}
+            {/* ─── Identité (hors entreprise) ─── */}
+            {!isEntreprise && (
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label htmlFor="first_name" className="block text-sm font-medium text-gray-700 mb-1">Prénom</label>
+                  <input id="first_name" name="first_name" required value={form.first_name} onChange={handleChange} className={inputClass('first_name')} placeholder="Abdoulaye" />
+                  {errors.first_name && <p className="text-red-500 text-xs mt-1">{errors.first_name}</p>}
+                </div>
+                <div>
+                  <label htmlFor="last_name" className="block text-sm font-medium text-gray-700 mb-1">Nom</label>
+                  <input id="last_name" name="last_name" required value={form.last_name} onChange={handleChange} className={inputClass('last_name')} placeholder="Ouédraogo" />
+                  {errors.last_name && <p className="text-red-500 text-xs mt-1">{errors.last_name}</p>}
+                </div>
               </div>
-              <div>
-                <label htmlFor="last_name" className="block text-sm font-medium text-gray-700 mb-1">Nom</label>
-                <input id="last_name" name="last_name" required value={form.last_name} onChange={handleChange} className={inputClass('last_name')} placeholder="Ouédraogo" />
-                {errors.last_name && <p className="text-red-500 text-xs mt-1">{errors.last_name}</p>}
-              </div>
-            </div>
+            )}
 
             {/* ─── Compte ─── */}
-            <div>
-              <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-1">Nom d'utilisateur</label>
-              <input id="username" name="username" required value={form.username} onChange={handleChange} className={inputClass('username')} placeholder="a.ouedraogo" />
-              {errors.username && <p className="text-red-500 text-xs mt-1">{errors.username}</p>}
-            </div>
+            {!isEntreprise && (
+              <div>
+                <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-1">Nom d'utilisateur</label>
+                <input id="username" name="username" required value={form.username} onChange={handleChange} className={inputClass('username')} placeholder="a.ouedraogo" />
+                {errors.username && <p className="text-red-500 text-xs mt-1">{errors.username}</p>}
+              </div>
+            )}
 
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+                {isEntreprise ? "Email de l'entreprise" : 'Email'}
+              </label>
               <input
                 id="email" name="email" type="email" required
                 value={form.email} onChange={handleChange}
                 className={inputClass('email')}
-                placeholder={isEtudiant ? 'prenom.nom@esi.unb.bf' : 'prof.nom@esi.unb.bf'}
+                placeholder={emailPlaceholder}
               />
               {isEtudiant && !errors.email && (
                 <p className="text-xs text-blue-600 mt-1 flex items-center gap-1">
@@ -301,70 +365,68 @@ export default function RegisterPage() {
                   <label htmlFor="telephone" className="block text-sm font-medium text-gray-700 mb-1">Téléphone</label>
                   <input id="telephone" name="telephone" type="tel" value={form.telephone} onChange={handleChange} className={inputClass('telephone')} placeholder="+226 70 00 00 00" />
                   {errors.telephone && <p className="text-red-500 text-xs mt-1">{errors.telephone}</p>}
+                </div>
+              </>
+            )}
 
-                            {/* ─── Champs conditionnels : Entreprise ─── */}
-                            {isEntreprise && (
-                              <>
-                                <div className="pt-2 border-t border-gray-100">
-                                  <p className="text-xs font-semibold text-green-700 uppercase tracking-wider mb-3">🏢 Informations de l'entreprise</p>
-                                </div>
+            {/* ─── Champs conditionnels : Entreprise ─── */}
+            {isEntreprise && (
+              <>
+                <div className="pt-2 border-t border-gray-100">
+                  <p className="text-xs font-semibold text-green-700 uppercase tracking-wider mb-3">🏢 Informations de l'entreprise</p>
+                </div>
 
-                                <div>
-                                  <label htmlFor="nom_entreprise" className="block text-sm font-medium text-gray-700 mb-1">
-                                    Nom de l'entreprise <span className="text-red-500">*</span>
-                                  </label>
-                                  <input
-                                    id="nom_entreprise" name="nom_entreprise" required={isEntreprise}
-                                    value={form.nom_entreprise ?? ''} onChange={handleChange}
-                                    className={inputClass('nom_entreprise')} placeholder="ONATEL, SOFIB, BRAKINA..." />
-                                  {errors.nom_entreprise && <p className="text-red-500 text-xs mt-1">{errors.nom_entreprise}</p>}
-                                </div>
+                <div>
+                  <label htmlFor="nom_entreprise" className="block text-sm font-medium text-gray-700 mb-1">
+                    Nom de l'entreprise <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    id="nom_entreprise" name="nom_entreprise" required
+                    value={form.nom_entreprise ?? ''} onChange={handleChange}
+                    className={inputClass('nom_entreprise')} placeholder="ONATEL, SOFITEX, BRAKINA..." />
+                  {errors.nom_entreprise && <p className="text-red-500 text-xs mt-1">{errors.nom_entreprise}</p>}
+                </div>
 
-                                <div className="grid grid-cols-2 gap-3">
-                                  <div>
-                                    <label htmlFor="secteur" className="block text-sm font-medium text-gray-700 mb-1">
-                                      Secteur d'activité <span className="text-red-500">*</span>
-                                    </label>
-                                    <input
-                                      id="secteur" name="secteur" required={isEntreprise}
-                                      value={form.secteur ?? ''} onChange={handleChange}
-                                      className={inputClass('secteur')} placeholder="Télécommunications, IT..." />
-                                    {errors.secteur && <p className="text-red-500 text-xs mt-1">{errors.secteur}</p>}
-                                  </div>
-                                  <div>
-                                    <label htmlFor="ville" className="block text-sm font-medium text-gray-700 mb-1">Ville</label>
-                                    <input
-                                      id="ville" name="ville"
-                                      value={form.ville ?? ''} onChange={handleChange}
-                                      className={inputClass('ville')} placeholder="Bobo-Dioulasso, Ouagadougou..." />
-                                    {errors.ville && <p className="text-red-500 text-xs mt-1">{errors.ville}</p>}
-                                  </div>
-                                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label htmlFor="secteur" className="block text-sm font-medium text-gray-700 mb-1">Secteur d'activité</label>
+                    <input
+                      id="secteur" name="secteur"
+                      value={form.secteur ?? ''} onChange={handleChange}
+                      className={inputClass('secteur')} placeholder="Télécommunications, IT..." />
+                    {errors.secteur && <p className="text-red-500 text-xs mt-1">{errors.secteur}</p>}
+                  </div>
+                  <div>
+                    <label htmlFor="ville" className="block text-sm font-medium text-gray-700 mb-1">Ville</label>
+                    <input
+                      id="ville" name="ville"
+                      value={form.ville ?? ''} onChange={handleChange}
+                      className={inputClass('ville')} placeholder="Bobo-Dioulasso, Ouagadougou..." />
+                    {errors.ville && <p className="text-red-500 text-xs mt-1">{errors.ville}</p>}
+                  </div>
+                </div>
 
-                                <div className="grid grid-cols-2 gap-3">
-                                  <div>
-                                    <label htmlFor="tel_entreprise" className="block text-sm font-medium text-gray-700 mb-1">Téléphone</label>
-                                    <input
-                                      id="tel_entreprise" name="tel_entreprise" type="tel"
-                                      value={form.tel_entreprise ?? ''} onChange={handleChange}
-                                      className={inputClass('tel_entreprise')} placeholder="+226 20 00 00 00" />
-                                    {errors.tel_entreprise && <p className="text-red-500 text-xs mt-1">{errors.tel_entreprise}</p>}
-                                  </div>
-                                  <div>
-                                    <label htmlFor="site_web" className="block text-sm font-medium text-gray-700 mb-1">Site web</label>
-                                    <input
-                                      id="site_web" name="site_web" type="url"
-                                      value={form.site_web ?? ''} onChange={handleChange}
-                                      className={inputClass('site_web')} placeholder="https://..." />
-                                    {errors.site_web && <p className="text-red-500 text-xs mt-1">{errors.site_web}</p>}
-                                  </div>
-                                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label htmlFor="tel_entreprise" className="block text-sm font-medium text-gray-700 mb-1">Téléphone</label>
+                    <input
+                      id="tel_entreprise" name="tel_entreprise" type="tel"
+                      value={form.tel_entreprise ?? ''} onChange={handleChange}
+                      className={inputClass('tel_entreprise')} placeholder="+226 20 00 00 00" />
+                    {errors.tel_entreprise && <p className="text-red-500 text-xs mt-1">{errors.tel_entreprise}</p>}
+                  </div>
+                  <div>
+                    <label htmlFor="site_web" className="block text-sm font-medium text-gray-700 mb-1">Site web</label>
+                    <input
+                      id="site_web" name="site_web" type="url"
+                      value={form.site_web ?? ''} onChange={handleChange}
+                      className={inputClass('site_web')} placeholder="https://..." />
+                    {errors.site_web && <p className="text-red-500 text-xs mt-1">{errors.site_web}</p>}
+                  </div>
+                </div>
 
-                                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-xs text-yellow-800">
-                                  ⚠️ Votre compte entreprise sera examiné et validé par un administrateur avant d'être activé.
-                                </div>
-                              </>
-                            )}
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-xs text-yellow-800">
+                  ⚠️ Votre compte entreprise sera examiné et validé par un administrateur avant activation.
                 </div>
               </>
             )}
@@ -372,13 +434,7 @@ export default function RegisterPage() {
             <button
               type="submit"
               disabled={loading}
-              className={`w-full py-3 text-white font-semibold rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-md ${
-                isEtudiant
-                  ? 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700'
-                  : isEnseignant
-                  ? 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700'
-                  : 'bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800'
-              }`}
+              className={`w-full py-3 text-white font-semibold rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-md ${submitButtonClass}`}
             >
               {loading ? (
                 <span className="flex items-center justify-center gap-2">
@@ -388,9 +444,7 @@ export default function RegisterPage() {
                   </svg>
                   Inscription...
                 </span>
-              ) : (
-                `Créer mon compte ${isEtudiant ? 'étudiant' : isEnseignant ? 'enseignant' : 'entreprise'}`
-              )}
+              ) : submitLabel}
             </button>
           </form>
 

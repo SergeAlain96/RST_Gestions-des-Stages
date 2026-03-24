@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import esiLogo from '../../Logo_esi_best (1).jpg';
 
 export default function Header() {
   const { user, isAuthenticated, isEtudiant, isEnseignant, isEntreprise, logout } = useAuth();
@@ -23,8 +24,8 @@ export default function Header() {
         <div className="flex justify-between items-center h-16">
           {/* Logo & Titre ESI */}
           <Link to="/" className="flex items-center gap-3 group">
-            <div className="w-10 h-10 bg-gradient-to-br from-green-700 to-green-900 rounded-lg flex items-center justify-center shadow-md group-hover:shadow-lg transition-shadow">
-              <span className="text-white font-bold text-sm tracking-tight">ESI</span>
+            <div className="w-10 h-10 rounded-lg overflow-hidden shadow-md group-hover:shadow-lg transition-shadow border border-gray-200 bg-white">
+              <img src={esiLogo} alt="Logo ESI" className="w-full h-full object-cover" />
             </div>
             <div>
               <h1 className="text-xl font-bold text-gray-900 leading-tight">

@@ -54,9 +54,14 @@ export default function SubmitStagePage() {
       await submitService.submitStage(formData);
       setSuccess(true);
       setTimeout(() => navigate('/dashboard'), 2000);
-    } catch (err: any) {
-      if (err.response?.data) {
-        const msgs = Object.values(err.response.data).flat().join(' ');
+    } catch (err: unknown) {
+      const data =
+        typeof err === 'object' && err !== null && 'response' in err
+          ? (err as { response?: { data?: Record<string, unknown> } }).response?.data
+          : undefined;
+
+      if (data) {
+        const msgs = Object.values(data).flat().join(' ');
         setError(msgs || 'Erreur lors de la soumission.');
       } else {
         setError('Erreur de connexion au serveur.');

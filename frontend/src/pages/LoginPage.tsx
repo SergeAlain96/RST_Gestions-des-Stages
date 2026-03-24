@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import esiLogo from '../../Logo_esi_best (1).jpg';
 
 export default function LoginPage() {
 const { login } = useAuth();
@@ -9,15 +10,33 @@ const [form, setForm] = useState({ username: '', password: '' });
 const [error, setError] = useState('');
 const [loading, setLoading] = useState(false);
 
-const handleSubmit = async (e: React.FormEvent) => {
+const handleSubmit = async (e: { preventDefault: () => void }) => {
     e.preventDefault();
     setError('');
     setLoading(true);
     try {
-        await login(form);
-      navigate('/dashboard');
-    } catch (err: any) {
-      if (err.response?.status === 401) {
+      await login(form);
+
+      const storedUserRaw = globalThis.localStorage.getItem('rst_user');
+      const role = storedUserRaw
+        ? (JSON.parse(storedUserRaw) as { role?: string }).role
+        : undefined;
+
+      if (role === 'admin') {
+        navigate('/admin/dashboard');
+      } else if (role === 'enseignant') {
+        navigate('/enseignant');
+      } else if (role === 'entreprise') {
+        navigate('/entreprise');
+      } else {
+        navigate('/dashboard');
+      }
+    } catch (err: unknown) {
+      const status =
+        typeof err === 'object' && err !== null && 'response' in err
+          ? (err as { response?: { status?: number } }).response?.status
+          : undefined;
+      if (status === 401) {
         setError('Nom d\'utilisateur ou mot de passe incorrect.');
       } else {
         setError('Erreur de connexion. Veuillez réessayer.');
@@ -33,8 +52,8 @@ const handleSubmit = async (e: React.FormEvent) => {
         {/* Logo */}
         <div className="text-center mb-8">
           <Link to="/" className="inline-flex items-center gap-3">
-            <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-xl flex items-center justify-center shadow-lg">
-              <span className="text-white font-bold text-xl">R</span>
+            <div className="w-12 h-12 rounded-xl overflow-hidden shadow-lg border border-gray-200 bg-white">
+              <img src={esiLogo} alt="Logo ESI" className="w-full h-full object-cover" />
             </div>
             <div className="text-left">
               <h1 className="text-2xl font-bold text-gray-900">RST <span className="text-blue-600">Projets</span></h1>

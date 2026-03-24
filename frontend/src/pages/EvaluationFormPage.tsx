@@ -85,9 +85,14 @@ export default function EvaluationFormPage() {
       }
       setSuccess(true);
       setTimeout(() => navigate('/enseignant/evaluations'), 2000);
-    } catch (err: any) {
-      if (err.response?.data) {
-        const msgs = Object.values(err.response.data).flat();
+    } catch (err: unknown) {
+      const data =
+        typeof err === 'object' && err !== null && 'response' in err
+          ? (err as { response?: { data?: Record<string, unknown> } }).response?.data
+          : undefined;
+
+      if (data) {
+        const msgs = Object.values(data).flat();
         setError(msgs.map(String).join(' ') || 'Erreur lors de la soumission.');
       } else {
         setError('Erreur de connexion au serveur.');
@@ -97,8 +102,15 @@ export default function EvaluationFormPage() {
     }
   };
 
-  const notes = [form.note_rapport, form.note_soutenance, form.note_technique, form.note_comportement].filter(n => n !== null) as number[];
+  const notes = [form.note_rapport, form.note_soutenance, form.note_technique, form.note_comportement].filter((n): n is number => n !== null);
   const moyenne = notes.length > 0 ? (notes.reduce((a, b) => a + b, 0) / notes.length).toFixed(2) : '—';
+  let submitLabel = 'Enregistrer l\'évaluation';
+  if (editId) {
+    submitLabel = 'Modifier l\'évaluation';
+  }
+  if (loading) {
+    submitLabel = 'Enregistrement...';
+  }
 
   if (fetchLoading) {
     return (
@@ -205,7 +217,7 @@ export default function EvaluationFormPage() {
                 disabled={loading}
                 className="flex-1 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all disabled:opacity-50 shadow-md text-sm"
               >
-                {loading ? 'Enregistrement...' : (editId ? 'Modifier l\'évaluation' : 'Enregistrer l\'évaluation')}
+                {submitLabel}
               </button>
             </div>
           </form>

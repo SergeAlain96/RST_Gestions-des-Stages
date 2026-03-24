@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import esiLogo from '../../Logo_esi_best (1).jpg';
 
 export default function Footer() {
   return (
@@ -9,8 +10,8 @@ export default function Footer() {
           {/* Identité ESI */}
           <div>
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-9 h-9 bg-gradient-to-br from-green-700 to-green-900 rounded-lg flex items-center justify-center shrink-0">
-                <span className="text-white font-bold text-xs tracking-tight">ESI</span>
+              <div className="w-9 h-9 rounded-lg overflow-hidden shrink-0 border border-gray-700 bg-white">
+                <img src={esiLogo} alt="Logo ESI" className="w-full h-full object-cover" />
               </div>
               <div>
                 <p className="text-white font-semibold leading-tight">École Supérieure d'Informatique</p>

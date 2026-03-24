@@ -25,8 +25,8 @@ class RegisterSerializer(serializers.Serializer):
     email = serializers.EmailField()
     password = serializers.CharField(write_only=True, validators=[validate_password])
     password2 = serializers.CharField(write_only=True)
-    first_name = serializers.CharField(max_length=30)
-    last_name = serializers.CharField(max_length=30)
+    first_name = serializers.CharField(max_length=30, required=False, allow_blank=True)
+    last_name = serializers.CharField(max_length=30, required=False, allow_blank=True)
 
     # Étudiant (requis si role == 'etudiant')
     matricule = serializers.CharField(max_length=50, required=False, allow_blank=True)
@@ -57,11 +57,19 @@ class RegisterSerializer(serializers.Serializer):
         return value
 
     def validate(self, attrs):
+        role = attrs.get('role')
+
         if attrs['password'] != attrs['password2']:
             raise serializers.ValidationError({"password2": "Les mots de passe ne correspondent pas."})
 
+        if role in ('etudiant', 'enseignant'):
+            if not attrs.get('first_name'):
+                raise serializers.ValidationError({"first_name": "Le prénom est requis."})
+            if not attrs.get('last_name'):
+                raise serializers.ValidationError({"last_name": "Le nom est requis."})
+
         # Validations conditionnelles pour étudiant
-        if attrs.get('role') == 'etudiant':
+        if role == 'etudiant':
             if not attrs.get('matricule'):
                 raise serializers.ValidationError({"matricule": "Le matricule est requis pour un étudiant."})
             if not attrs.get('filiere'):
@@ -95,9 +103,12 @@ class RegisterSerializer(serializers.Serializer):
                         ]
                     })
 
-        if attrs.get('role') == 'entreprise':
+        if role == 'entreprise':
             if not attrs.get('nom_entreprise'):
                 raise serializers.ValidationError({"nom_entreprise": "Le nom de l'entreprise est requis."})
+            # Préremplissage du nom affiché du compte utilisateur entreprise
+            attrs['first_name'] = attrs.get('first_name') or attrs['nom_entreprise']
+            attrs['last_name'] = attrs.get('last_name') or 'Entreprise'
 
         return attrs
 
